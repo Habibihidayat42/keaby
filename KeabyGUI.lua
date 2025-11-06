@@ -1,45 +1,10 @@
--- 🛡️ Xeno Safe Bootstrap (delayed GUI initialization)
-local Players, RunService, StarterGui
+-- KeabyGUI_v2.3.lua
+-- Single-file Safe Mode
+-- Flat matte honey theme, sidebar, sliders, toggles, minimize -> draggable bee icon
+-- Loads feature modules from GitHub raw if local files not available.
+-- Place this single file in your executor and run it. Requires internet if local files absent.
 
-repeat
-    task.wait()
-    local ok = pcall(function()
-        Players = game:GetService("Players")
-        RunService = game:GetService("RunService")
-        StarterGui = game:GetService("StarterGui")
-    end)
-until ok and Players and RunService and StarterGui
-
--- Wait for LocalPlayer and CoreGui access
-local localPlayer = nil
-repeat
-    task.wait()
-    local ok2, res = pcall(function()
-        localPlayer = Players.LocalPlayer
-        return localPlayer and localPlayer:FindFirstChildOfClass("PlayerGui")
-    end)
-until ok2 and res
-
--- Double-verify by calling SetCore safely
-local ready = false
-repeat
-    local ok3 = pcall(function()
-        StarterGui:SetCore("SendNotification", {Title="KeabyUI", Text="Initializing...", Duration=1})
-    end)
-    if ok3 then ready = true end
-    task.wait(0.5)
-until ready
-
--- Now that core modules are truly loaded, continue GUI creation
-
-local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
-local HttpService = game:GetService("HttpService")
-local localPlayer = Players.LocalPlayer
-local playerGui = localPlayer:FindFirstChildOfClass("PlayerGui") or localPlayer:WaitForChild("PlayerGui")
-
+-- Safety/wait: ensure game and PlayerGui ready to avoid "Could not find a CoreModule"
 repeat task.wait() until game:IsLoaded()
 
 local Players = game:GetService("Players")
