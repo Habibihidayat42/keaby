@@ -233,7 +233,15 @@ local toggleFrameI, getStateI, toggleBtnI = createToggle(pnlInstant, "Enable Ins
         mod.Settings.FishingDelay = pnlInstant._fishVal or mod.Settings.FishingDelay or 0.12
         mod.Settings.CancelDelay = pnlInstant._cancelVal or mod.Settings.CancelDelay or 0.05
         loaded.Instant.inst = mod
-        if type(mod.Start) == "function" then pcall(mod.Start, mod) end
+        if type(mod.Start) == "function" then
+            task.defer(function()
+                pcall(mod.Start, mod)
+            end)
+        end
+        -- langsung matikan kebutuhan toggle key (agar tidak butuh F)
+        if mod.ToggleKey then
+            mod.ToggleKey = nil
+        end
     else
         if loaded.Instant.inst and type(loaded.Instant.inst.Stop) == "function" then pcall(loaded.Instant.inst.Stop, loaded.Instant.inst) end
     end
