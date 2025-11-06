@@ -1,10 +1,8 @@
--- Instant.lua (cleaned) -- INSTANT BITE FISHING (GUI removed)
+-- Instant.lua (no toggle key) - INSTANT BITE FISHING
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
 local localPlayer = Players.LocalPlayer
 
--- net references (same as original)
 local netFolder = ReplicatedStorage:WaitForChild("Packages"):WaitForChild("_Index")
     :WaitForChild("sleitnick_net@0.2.0"):WaitForChild("net")
 
@@ -19,7 +17,6 @@ local fishing = {
     Running = false,
     WaitingHook = false,
     TotalFish = 0,
-    ToggleKey = "F",
     Settings = {
         FishingDelay = 0.12,
         CancelDelay = 0.05,
@@ -30,7 +27,9 @@ local fishing = {
 }
 _G.FishingScript = fishing
 
-local function log(msg) print("[Fishing] "..msg) end
+local function log(msg)
+    print("[Fishing] " .. msg)
+end
 
 RE_MinigameChanged.OnClientEvent:Connect(function(state)
     if not fishing.Running or not fishing.WaitingHook then return end
@@ -100,14 +99,5 @@ function fishing.Stop()
     fishing.WaitingHook = false
     log("🛑 Stopped")
 end
-
-function fishing.Toggle()
-    if fishing.Running then fishing.Stop() else fishing.Start() end
-end
-
-UserInputService.InputBegan:Connect(function(input, processed)
-    if processed then return end
-    if input.KeyCode == Enum.KeyCode[fishing.ToggleKey] then fishing.Toggle() end
-end)
 
 return fishing
