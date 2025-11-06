@@ -1,17 +1,25 @@
--- KeabyGUI.lua v2.2
--- Honey flat matte theme, fixed sliders, toggles call module Start/Stop, minimize -> draggable bee emote icon
--- Place this file outside FungsiKeaby and make sure FungsiKeaby/Instant.lua and Instant2Xspeed.lua exist in repo or local files.
+-- KeabyGUI_v2.3.lua
+-- Single-file Safe Mode
+-- Flat matte honey theme, sidebar, sliders, toggles, minimize -> draggable bee icon
+-- Loads feature modules from GitHub raw if local files not available.
+-- Place this single file in your executor and run it. Requires internet if local files absent.
+
+-- Safety/wait: ensure game and PlayerGui ready to avoid "Could not find a CoreModule"
+repeat task.wait() until game:IsLoaded()
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
 local localPlayer = Players.LocalPlayer
+repeat task.wait() until localPlayer
+repeat task.wait() until localPlayer:FindFirstChild("PlayerGui")
 
--- Fallback GitHub raw base (used only if readfile/isfile not available)
+-- GitHub raw base (expects files at /FungsiKeaby/Instant.lua and Instant2Xspeed.lua)
 local GITHUB_RAW_BASE = "https://raw.githubusercontent.com/Habibihidayat42/keaby/main/FungsiKeaby/"
 
--- Safe loader: try local file then HttpGet
+-- Safe loader: try local file (readfile/isfile) first, else HttpGet
 local function safeLoadFeature(filename)
     local code
     local ok, hasIsfile = pcall(function() return isfile end)
@@ -22,7 +30,7 @@ local function safeLoadFeature(filename)
         local suc, res = pcall(function() return game:HttpGet(url) end)
         if suc then code = res end
     end
-    if not code then return nil, "Keaby: failed to fetch " .. filename end
+    if not code then return nil, "failed to fetch "..filename end
     local fn, err = loadstring(code)
     if not fn then return nil, err end
     local ok2, result = pcall(fn)
@@ -30,35 +38,28 @@ local function safeLoadFeature(filename)
     return result
 end
 
--- quick instance maker
+-- Helper to create instances
 local function new(class, props)
-    local i = Instance.new(class)
+    local inst = Instance.new(class)
     if props then
         for k,v in pairs(props) do
-            if k == "Parent" then i.Parent = v else i[k] = v end
+            if k == "Parent" then inst.Parent = v else inst[k] = v end
         end
     end
-    return i
+    return inst
 end
 
--- ensure PlayerGui and remove old GUI
+-- Clean previous GUI if exists
 local playerGui = localPlayer:WaitForChild("PlayerGui")
 for _,c in ipairs(playerGui:GetChildren()) do
-    if c.Name == "KeabyGUI" then c:Destroy() end
+    if c.Name == "KeabyGUI" then pcall(function() c:Destroy() end) end
 end
 
 local screenGui = new("ScreenGui", {Name = "KeabyGUI", ResetOnSpawn = false, Parent = playerGui})
 screenGui.IgnoreGuiInset = true
 
--- Modal blocker (active only when main window shown)
-local blocker = new("Frame", {
-    Parent = screenGui,
-    Size = UDim2.fromScale(1,1),
-    Position = UDim2.new(0,0,0,0),
-    BackgroundTransparency = 1,
-    Active = true, -- will toggle
-    ZIndex = 1,
-})
+-- Modal blocker (active while window visible)
+local blocker = new("Frame", {Parent = screenGui, Size = UDim2.fromScale(1,1), Position = UDim2.new(0,0), BackgroundTransparency = 1, Active = true, ZIndex = 1})
 
 -- Main window
 local window = new("Frame", {
@@ -95,7 +96,7 @@ local sidebar = new("Frame", {
 })
 new("UICorner", {Parent = sidebar, CornerRadius = UDim.new(0,10)})
 
--- Sidebar header with hexagon placeholder
+-- Sidebar header with hex logo
 local sideHeader = new("Frame", {Parent = sidebar, Size = UDim2.new(1,0,0,96), BackgroundTransparency = 1})
 local logoOuter = new("Frame", {Parent = sideHeader, Size = UDim2.new(0,60,0,60), Position = UDim2.new(0,16,0,18), BackgroundColor3 = Color3.fromRGB(255,215,120), BorderSizePixel = 0, ZIndex = 5})
 new("UICorner", {Parent = logoOuter, CornerRadius = UDim.new(1,0)})
@@ -103,7 +104,7 @@ local hex = new("Frame", {Parent = logoOuter, Size = UDim2.new(0.66,0,0.66,0), P
 new("UICorner", {Parent = hex, CornerRadius = UDim.new(0,8)})
 local titleLabel = new("TextLabel", {Parent = sideHeader, Size = UDim2.new(1,-92,0,56), Position = UDim2.new(0,84,0,22), BackgroundTransparency = 1, Text = "Keaby", Font = Enum.Font.GothamBold, TextSize = 20, TextColor3 = Color3.fromRGB(35,20,0), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 6})
 
--- Sidebar menu area
+-- Sidebar menu
 local menu = new("Frame", {Parent = sidebar, Size = UDim2.new(1,-24,1,-120), Position = UDim2.new(0,12,0,120), BackgroundTransparency = 1})
 local menuLayout = new("UIListLayout", {Parent = menu, Padding = UDim.new(0,10), SortOrder = Enum.SortOrder.LayoutOrder})
 menuLayout.Padding = UDim.new(0,10)
@@ -205,7 +206,6 @@ local function createSlider(parent, labelText, min, max, default, onChange)
         end
     end)
     return f, function(v)
-        -- programmatically set slider fill/label
         local rel = math.clamp((v - min) / (max - min), 0, 1)
         fill.Size = UDim2.new(rel,0,1,0)
         lbl.Text = string.format("%s: %.2fs", labelText, v)
@@ -213,61 +213,42 @@ local function createSlider(parent, labelText, min, max, default, onChange)
     end
 end
 
--- feature module storage
+-- feature storage
 local loaded = { Instant = {mod=nil, inst=nil}, Instant2X = {mod=nil, inst=nil} }
 
--- create feature panels
+-- panels and controls
 local pnlInstant = makePanel("Instant Fishing")
 pnlInstant.LayoutOrder = 1
 pnlInstant.Size = UDim2.new(1,0,0,220)
-
 local toggleFrameI, getStateI, toggleBtnI = createToggle(pnlInstant, "Enable Instant Fishing", false, function(enabled)
-    -- toggle callback
     if enabled then
         if not loaded.Instant.mod then
             local mod, err = safeLoadFeature("Instant.lua")
-            if not mod then warn("Keaby: failed loading Instant.lua", err); -- flip button back safely
-                toggleBtnI.BackgroundColor3 = Color3.fromRGB(210,210,210); toggleBtnI.Text = "OFF"; return end
+            if not mod then warn("Keaby: failed loading Instant.lua", err); toggleBtnI.BackgroundColor3 = Color3.fromRGB(210,210,210); toggleBtnI.Text = "OFF"; return end
             loaded.Instant.mod = mod
         end
         local mod = loaded.Instant.mod
         mod.Settings = mod.Settings or {}
-        -- apply current slider values if present
         mod.Settings.HookDelay = pnlInstant._hookVal or mod.Settings.HookDelay or 0.06
         mod.Settings.FishingDelay = pnlInstant._fishVal or mod.Settings.FishingDelay or 0.12
         mod.Settings.CancelDelay = pnlInstant._cancelVal or mod.Settings.CancelDelay or 0.05
         loaded.Instant.inst = mod
-        -- start if method available
         if type(mod.Start) == "function" then pcall(mod.Start, mod) end
     else
         if loaded.Instant.inst and type(loaded.Instant.inst.Stop) == "function" then pcall(loaded.Instant.inst.Stop, loaded.Instant.inst) end
     end
 end)
 
--- Ensure sliders are visible by setting LayoutOrder and Parent set by creator
-local hookSlider, setHookVal = createSlider(pnlInstant, "Hook Delay", 0.01, 0.25, 0.06, function(v)
-    pnlInstant._hookVal = v
-    if loaded.Instant.mod then loaded.Instant.mod.Settings = loaded.Instant.mod.Settings or {}; loaded.Instant.mod.Settings.HookDelay = v end
-end)
+local hookSlider, setHookVal = createSlider(pnlInstant, "Hook Delay", 0.01, 0.25, 0.06, function(v) pnlInstant._hookVal = v; if loaded.Instant.mod then loaded.Instant.mod.Settings = loaded.Instant.mod.Settings or {}; loaded.Instant.mod.Settings.HookDelay = v end end)
 hookSlider.LayoutOrder = 2
-
-local fishSlider, setFishVal = createSlider(pnlInstant, "Fishing Delay", 0.05, 1.0, 0.12, function(v)
-    pnlInstant._fishVal = v
-    if loaded.Instant.mod then loaded.Instant.mod.Settings = loaded.Instant.mod.Settings or {}; loaded.Instant.mod.Settings.FishingDelay = v end
-end)
+local fishSlider, setFishVal = createSlider(pnlInstant, "Fishing Delay", 0.05, 1.0, 0.12, function(v) pnlInstant._fishVal = v; if loaded.Instant.mod then loaded.Instant.mod.Settings = loaded.Instant.mod.Settings or {}; loaded.Instant.mod.Settings.FishingDelay = v end end)
 fishSlider.LayoutOrder = 3
-
-local cancelSlider, setCancelVal = createSlider(pnlInstant, "Cancel Delay", 0.01, 0.25, 0.05, function(v)
-    pnlInstant._cancelVal = v
-    if loaded.Instant.mod then loaded.Instant.mod.Settings = loaded.Instant.mod.Settings or {}; loaded.Instant.mod.Settings.CancelDelay = v end
-end)
+local cancelSlider, setCancelVal = createSlider(pnlInstant, "Cancel Delay", 0.01, 0.25, 0.05, function(v) pnlInstant._cancelVal = v; if loaded.Instant.mod then loaded.Instant.mod.Settings = loaded.Instant.mod.Settings or {}; loaded.Instant.mod.Settings.CancelDelay = v end end)
 cancelSlider.LayoutOrder = 4
 
--- Instant 2x
 local pnl2x = makePanel("Instant 2x Speed")
 pnl2x.LayoutOrder = 2
 pnl2x.Size = UDim2.new(1,0,0,180)
-
 local toggleFrame2, getState2, toggleBtn2 = createToggle(pnl2x, "Enable Instant 2x Speed", false, function(enabled)
     if enabled then
         if not loaded.Instant2X.mod then
@@ -286,34 +267,24 @@ local toggleFrame2, getState2, toggleBtn2 = createToggle(pnl2x, "Enable Instant 
     end
 end)
 
-local twoFish, setTwoFish = createSlider(pnl2x, "Fishing Delay", 0.0, 1.0, 0.3, function(v)
-    pnl2x._fishVal = v
-    if loaded.Instant2X.mod then loaded.Instant2X.mod.Settings = loaded.Instant2X.mod.Settings or {}; loaded.Instant2X.mod.Settings.FishingDelay = v end
-end)
+local twoFish, setTwoFish = createSlider(pnl2x, "Fishing Delay", 0.0, 1.0, 0.3, function(v) pnl2x._fishVal = v; if loaded.Instant2X.mod then loaded.Instant2X.mod.Settings = loaded.Instant2X.mod.Settings or {}; loaded.Instant2X.mod.Settings.FishingDelay = v end end)
 twoFish.LayoutOrder = 2
-
-local twoCancel, setTwoCancel = createSlider(pnl2x, "Cancel Delay", 0.01, 0.2, 0.05, function(v)
-    pnl2x._cancelVal = v
-    if loaded.Instant2X.mod then loaded.Instant2X.mod.Settings = loaded.Instant2X.mod.Settings or {}; loaded.Instant2X.mod.Settings.CancelDelay = v end
-end)
+local twoCancel, setTwoCancel = createSlider(pnl2x, "Cancel Delay", 0.01, 0.2, 0.05, function(v) pnl2x._cancelVal = v; if loaded.Instant2X.mod then loaded.Instant2X.mod.Settings = loaded.Instant2X.mod.Settings or {}; loaded.Instant2X.mod.Settings.CancelDelay = v end end)
 twoCancel.LayoutOrder = 3
 
--- update scroll canvas
+-- Canvas sizing
 local function recalcCanvas()
     task.wait(0.03)
     local total = 0
     for _,c in ipairs(scrollFrame:GetChildren()) do
-        if c:IsA("Frame") then
-            total = total + c.AbsoluteSize.Y + scrollLayout.Padding.Offset
-        end
+        if c:IsA("Frame") then total = total + c.AbsoluteSize.Y + scrollLayout.Padding.Offset end
     end
     scrollFrame.CanvasSize = UDim2.new(0,0,0, math.max(total + 16, 1))
 end
 spawn(function() wait(0.08) recalcCanvas() end)
-scrollFrame:GetPropertyChangedSignal("CanvasSize"):Connect(function() end)
 window:GetPropertyChangedSignal("AbsoluteSize"):Connect(recalcCanvas)
 
--- sidebar action
+-- sidebar behavior
 mainBtn.MouseButton1Click:Connect(function()
     local targetY = mainBtn.AbsolutePosition.Y - sidebar.AbsolutePosition.Y
     indicator:TweenPosition(UDim2.new(0,6,0,targetY), "Out", "Quad", 0.18, true)
@@ -321,7 +292,7 @@ mainBtn.MouseButton1Click:Connect(function()
     pageSub.Text = "Auto Fishing features"
 end)
 
--- dragging the whole window by dragArea
+-- dragging
 do
     local dragging, dragStart, startPos = false, nil, nil
     dragArea.InputBegan:Connect(function(input)
@@ -338,21 +309,17 @@ do
         end
     end)
     UserInputService.InputEnded:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
-            dragging = false
-        end
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then dragging = false end
     end)
 end
 
--- resizer (bottom-right)
+-- resizer
 local resizer = new("ImageButton", {Parent = window, Size = UDim2.new(0,18,0,18), Position = UDim2.new(1,-26,1,-26), BackgroundColor3 = Color3.fromRGB(230,160,40), AutoButtonColor = false, ZIndex = 9})
 new("UICorner", {Parent = resizer, CornerRadius = UDim.new(0,4)})
 local resizing, startSize, startMouse = false, nil, nil
 resizer.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        resizing = true
-        startSize = window.Size
-        startMouse = input.Position
+        resizing = true startSize = window.Size startMouse = input.Position
     end
 end)
 UserInputService.InputChanged:Connect(function(input)
@@ -363,11 +330,9 @@ UserInputService.InputChanged:Connect(function(input)
         window.Size = UDim2.new(0, newW, 0, newH)
     end
 end)
-UserInputService.InputEnded:Connect(function(input)
-    if resizing then resizing = false end
-end)
+UserInputService.InputEnded:Connect(function(input) if resizing then resizing = false end end)
 
--- minimize logic -> hide window & create draggable bee emoji icon on left middle
+-- minimize behavior: hide window, disable blocker, create draggable emoji icon
 local minimized = false
 local savedPos, savedSize = nil, nil
 local minIcon = nil
@@ -375,24 +340,10 @@ local iconDrag = {dragging=false, startMouse=Vector2.new(), startPos=UDim2.new()
 
 local function createMinIcon()
     if minIcon and minIcon.Parent then minIcon:Destroy() end
-    minIcon = new("TextButton", {
-        Parent = screenGui,
-        Name = "KeabyMinIcon",
-        Size = UDim2.new(0,56,0,56),
-        Position = UDim2.new(0,12,0.5,-28),
-        BackgroundColor3 = Color3.fromRGB(255,220,120),
-        BorderSizePixel = 0,
-        Text = "🐝",
-        Font = Enum.Font.SourceSans,
-        TextSize = 28,
-        ZIndex = 60,
-        AutoButtonColor = false,
-    })
+    minIcon = new("TextButton", {Parent = screenGui, Name = "KeabyMinIcon", Size = UDim2.new(0,56,0,56), Position = UDim2.new(0,12,0.5,-28), BackgroundColor3 = Color3.fromRGB(255,220,120), BorderSizePixel = 0, Text = "🐝", Font = Enum.Font.SourceSans, TextSize = 28, ZIndex = 60, AutoButtonColor = false})
     new("UICorner", {Parent = minIcon, CornerRadius = UDim.new(1,0)})
-    -- click to restore
     minIcon.MouseButton1Click:Connect(function()
         if minimized then
-            -- restore
             if minIcon then minIcon.Visible = false end
             window.Position = savedPos or window.Position
             window.Size = savedSize or window.Size
@@ -401,7 +352,7 @@ local function createMinIcon()
             blocker.Active = true
             blocker.BackgroundTransparency = 1
             minimized = false
-            -- ensure icon remains (hidden) - user can re-minimize later
+            recalcCanvas()
         end
     end)
     -- drag icon
@@ -424,52 +375,30 @@ local function createMinIcon()
             minIcon.Position = UDim2.new(0, newX, 0, newY)
         end
     end)
-    UserInputService.InputEnded:Connect(function(input)
-        if iconDrag.dragging and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
-            iconDrag.dragging = false
-        end
-    end)
+    UserInputService.InputEnded:Connect(function(input) if iconDrag.dragging then iconDrag.dragging = false end end)
 end
 
 btnMin.MouseButton1Click:Connect(function()
     if not minimized then
-        savedPos = window.Position
-        savedSize = window.Size
-        window.Visible = false
-        blocker.Active = false
+        savedPos = window.Position savedSize = window.Size
+        window.Visible = false blocker.Active = false
         createMinIcon()
         minimized = true
     else
-        -- restore (shouldn't normally be reachable because btn is hidden)
         if minIcon then minIcon.Visible = false end
-        window.Visible = true
-        blocker.Active = true
-        minimized = false
+        window.Visible = true blocker.Active = true minimized = false
     end
 end)
 
--- close cleanly (stop modules if running)
+-- Close: stop modules and destroy GUI
 btnClose.MouseButton1Click:Connect(function()
-    -- stop modules
     if loaded.Instant.inst and type(loaded.Instant.inst.Stop) == "function" then pcall(loaded.Instant.inst.Stop, loaded.Instant.inst) end
     if loaded.Instant2X.inst and type(loaded.Instant2X.inst.Stop) == "function" then pcall(loaded.Instant2X.inst.Stop, loaded.Instant2X.inst) end
     if minIcon and minIcon.Parent then minIcon:Destroy() end
     screenGui:Destroy()
 end)
 
--- ensure blocker initially active
-blocker.Active = true
-blocker.BackgroundTransparency = 1
-
--- initial indicator align
-spawn(function()
-    task.wait(0.06)
-    local targetY = mainBtn.AbsolutePosition.Y - sidebar.AbsolutePosition.Y
-    indicator.Position = UDim2.new(0,6,0,targetY)
-    recalcCanvas()
-end)
-
--- expose for debugging if needed
-print("Keaby GUI v2.2 loaded (flat matte honey).")
-
+-- Finalize initial layout and canvas
+spawn(function() task.wait(0.08) recalcCanvas() end)
+print("KeabyGUI v2.3 (single-file safe mode) loaded")
 return screenGui
