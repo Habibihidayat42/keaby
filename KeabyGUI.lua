@@ -21,8 +21,9 @@ end
 -- =====================================================
 -- LOAD FISHING FUNCTIONS FROM FOLDER FungsiKeaby
 -- =====================================================
-local instant = loadfile("Keaby/FungsiKeaby/Instant.lua")()
-local instant2x = loadfile("Keaby/FungsiKeaby/Instant2Xspeed.lua")()
+-- Online load versi raw
+local instant = loadstring(game:HttpGet("https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/Instant.lua"))()
+local instant2x = loadstring(game:HttpGet("https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/Instant2Xspeed.lua"))()
 
 -- =====================================================
 -- GUI CREATION
