@@ -1,629 +1,447 @@
+-- KeabyGUI.lua
+-- GUI utama "Keaby" (tema lebah / sarang madu)
+-- Compatible PC / Android / iOS. Uses modal blocker so underlying UI is not reachable.
+
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
-local HttpService = game:GetService("HttpService")
 local localPlayer = Players.LocalPlayer
 
-if _G.KeabyGUI then
-    if _G.KeabyGUI.Destroy then
-        _G.KeabyGUI:Destroy()
-    end
-    task.wait(0.1)
-end
+-- Config: paste your GitHub raw base if needed (branch main)
+local GITHUB_RAW_BASE = "https://raw.githubusercontent.com/Habibihidayat42/keaby/main/FungsiKeaby/"
 
-local Keaby = {
-    GUI = nil,
-    Minimized = false,
-    InstantFishing = nil,
-    Instant2XSpeed = nil,
-    GitHubRepo = "https://raw.githubusercontent.com/Habibihidayat42/keaby/main/"
-}
-
-_G.KeabyGUI = Keaby
-
-local function createHexagon(parent, size, position, color, zindex)
-    local hexFrame = Instance.new("Frame")
-    hexFrame.Size = size or UDim2.new(0, 60, 0, 60)
-    hexFrame.Position = position or UDim2.new(0, 0, 0, 0)
-    hexFrame.BackgroundTransparency = 1
-    hexFrame.ZIndex = zindex or 1
-    hexFrame.Parent = parent
-    
-    local hex = Instance.new("ImageLabel")
-    hex.Size = UDim2.new(1, 0, 1, 0)
-    hex.BackgroundTransparency = 1
-    hex.Image = "rbxassetid://6671315751"
-    hex.ImageColor3 = color or Color3.fromRGB(255, 180, 70)
-    hex.ScaleType = Enum.ScaleType.Fit
-    hex.ZIndex = zindex or 1
-    hex.Parent = hexFrame
-    
-    return hexFrame
-end
-
-local function createBeeIcon(parent, size, position)
-    local beeFrame = Instance.new("Frame")
-    beeFrame.Size = size or UDim2.new(0, 40, 0, 40)
-    beeFrame.Position = position or UDim2.new(0.5, -20, 0.5, -20)
-    beeFrame.BackgroundTransparency = 1
-    beeFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-    beeFrame.Parent = parent
-    
-    local body = Instance.new("Frame")
-    body.Size = UDim2.new(0.7, 0, 0.8, 0)
-    body.Position = UDim2.new(0.15, 0, 0.1, 0)
-    body.BackgroundColor3 = Color3.fromRGB(255, 200, 50)
-    body.Parent = beeFrame
-    Instance.new("UICorner", body).CornerRadius = UDim.new(0.5, 0)
-    
-    local stripe1 = Instance.new("Frame")
-    stripe1.Size = UDim2.new(1, 0, 0.2, 0)
-    stripe1.Position = UDim2.new(0, 0, 0.25, 0)
-    stripe1.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    stripe1.BorderSizePixel = 0
-    stripe1.Parent = body
-    
-    local stripe2 = Instance.new("Frame")
-    stripe2.Size = UDim2.new(1, 0, 0.2, 0)
-    stripe2.Position = UDim2.new(0, 0, 0.55, 0)
-    stripe2.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    stripe2.BorderSizePixel = 0
-    stripe2.Parent = body
-    
-    local wing1 = Instance.new("Frame")
-    wing1.Size = UDim2.new(0.3, 0, 0.4, 0)
-    wing1.Position = UDim2.new(-0.15, 0, 0.2, 0)
-    wing1.BackgroundColor3 = Color3.fromRGB(200, 230, 255)
-    wing1.BackgroundTransparency = 0.3
-    wing1.Rotation = -20
-    wing1.Parent = beeFrame
-    Instance.new("UICorner", wing1).CornerRadius = UDim.new(0.5, 0)
-    
-    local wing2 = Instance.new("Frame")
-    wing2.Size = UDim2.new(0.3, 0, 0.4, 0)
-    wing2.Position = UDim2.new(0.85, 0, 0.2, 0)
-    wing2.BackgroundColor3 = Color3.fromRGB(200, 230, 255)
-    wing2.BackgroundTransparency = 0.3
-    wing2.Rotation = 20
-    wing2.Parent = beeFrame
-    Instance.new("UICorner", wing2).CornerRadius = UDim.new(0.5, 0)
-    
-    return beeFrame
-end
-
-local function loadFromGitHub(scriptPath)
-    local success, result = pcall(function()
-        return game:HttpGet(Keaby.GitHubRepo .. scriptPath)
-    end)
-    
-    if success then
-        local loadSuccess, module = pcall(function()
-            return loadstring(result)()
-        end)
-        if loadSuccess then
-            return module
-        else
-            warn("[Keaby] Error loading module: " .. tostring(module))
-            return nil
-        end
+-- Utility: safe load feature script (tries local readfile if available, else HttpGet)
+local function safeLoadFeature(filename)
+    local code
+    -- try exploit file APIs
+    local ok, isfile = pcall(function() return isfile end)
+    if ok and isfile and isfile(filename) then
+        code = readfile(filename)
     else
-        warn("[Keaby] Error fetching from GitHub: " .. tostring(result))
-        return nil
+        -- try raw github
+        local url = GITHUB_RAW_BASE .. filename
+        local ok2, res = pcall(function() return game:HttpGet(url) end)
+        if ok2 then code = res end
     end
+    if not code then return nil, "failed to fetch " .. filename end
+    local func, err = loadstring(code)
+    if not func then return nil, err end
+    local status, result = pcall(func)
+    if not status then return nil, result end
+    return result
 end
 
-function Keaby:CreateGUI()
-    if self.GUI then
-        self.GUI:Destroy()
+-- small helper to create UI elements easier
+local function new(class, props)
+    local obj = Instance.new(class)
+    if props then
+        for k,v in pairs(props) do
+            if k == "Parent" then obj.Parent = v
+            else obj[k] = v end
+        end
     end
-    
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "KeabyGUI"
-    gui.ResetOnSpawn = false
-    gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    gui.Parent = localPlayer:WaitForChild("PlayerGui")
-    self.GUI = gui
-    
-    local mainFrame = Instance.new("Frame")
-    mainFrame.Name = "MainFrame"
-    mainFrame.Size = UDim2.new(0, 380, 0, 480)
-    mainFrame.Position = UDim2.new(0.5, -190, 0.5, -240)
-    mainFrame.BackgroundColor3 = Color3.fromRGB(255, 200, 80)
-    mainFrame.BorderSizePixel = 0
-    mainFrame.Parent = gui
-    
-    local mainCorner = Instance.new("UICorner")
-    mainCorner.CornerRadius = UDim.new(0, 20)
-    mainCorner.Parent = mainFrame
-    
-    local gradient = Instance.new("UIGradient")
-    gradient.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 210, 90)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 180, 60))
-    }
-    gradient.Rotation = 45
-    gradient.Parent = mainFrame
-    
-    createHexagon(mainFrame, UDim2.new(0, 50, 0, 50), UDim2.new(0, 10, 0, 10), Color3.fromRGB(255, 220, 100), 1)
-    createHexagon(mainFrame, UDim2.new(0, 40, 0, 40), UDim2.new(1, -50, 0, 15), Color3.fromRGB(255, 190, 70), 1)
-    createHexagon(mainFrame, UDim2.new(0, 35, 0, 35), UDim2.new(0, 15, 1, -45), Color3.fromRGB(255, 210, 85), 1)
-    createHexagon(mainFrame, UDim2.new(0, 45, 0, 45), UDim2.new(1, -55, 1, -55), Color3.fromRGB(255, 200, 75), 1)
-    
-    local header = Instance.new("Frame")
-    header.Name = "Header"
-    header.Size = UDim2.new(1, 0, 0, 60)
-    header.BackgroundColor3 = Color3.fromRGB(230, 170, 50)
-    header.BorderSizePixel = 0
-    header.ZIndex = 2
-    header.Parent = mainFrame
-    
-    local headerCorner = Instance.new("UICorner")
-    headerCorner.CornerRadius = UDim.new(0, 20)
-    headerCorner.Parent = header
-    
-    local headerBottom = Instance.new("Frame")
-    headerBottom.Size = UDim2.new(1, 0, 0, 20)
-    headerBottom.Position = UDim2.new(0, 0, 1, -20)
-    headerBottom.BackgroundColor3 = Color3.fromRGB(230, 170, 50)
-    headerBottom.BorderSizePixel = 0
-    headerBottom.ZIndex = 2
-    headerBottom.Parent = header
-    
-    createBeeIcon(header, UDim2.new(0, 40, 0, 40), UDim2.new(0, 30, 0.5, 0))
-    
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, -140, 1, 0)
-    title.Position = UDim2.new(0, 70, 0, 0)
-    title.BackgroundTransparency = 1
-    title.Text = "KEABY"
-    title.TextColor3 = Color3.fromRGB(255, 255, 255)
-    title.Font = Enum.Font.GothamBold
-    title.TextSize = 24
-    title.TextXAlignment = Enum.TextXAlignment.Left
-    title.ZIndex = 3
-    title.Parent = header
-    
-    local subtitle = Instance.new("TextLabel")
-    subtitle.Size = UDim2.new(1, -140, 0, 20)
-    subtitle.Position = UDim2.new(0, 70, 0, 28)
-    subtitle.BackgroundTransparency = 1
-    subtitle.Text = "Honeycomb Fishing Script"
-    subtitle.TextColor3 = Color3.fromRGB(255, 240, 200)
-    subtitle.Font = Enum.Font.Gotham
-    subtitle.TextSize = 11
-    subtitle.TextXAlignment = Enum.TextXAlignment.Left
-    subtitle.ZIndex = 3
-    subtitle.Parent = header
-    
-    local minimizeBtn = Instance.new("TextButton")
-    minimizeBtn.Name = "MinimizeButton"
-    minimizeBtn.Size = UDim2.new(0, 35, 0, 35)
-    minimizeBtn.Position = UDim2.new(1, -45, 0, 12)
-    minimizeBtn.BackgroundColor3 = Color3.fromRGB(255, 220, 100)
-    minimizeBtn.Text = "_"
-    minimizeBtn.TextColor3 = Color3.fromRGB(100, 70, 30)
-    minimizeBtn.Font = Enum.Font.GothamBold
-    minimizeBtn.TextSize = 20
-    minimizeBtn.ZIndex = 3
-    minimizeBtn.Parent = header
-    
-    local minBtnCorner = Instance.new("UICorner")
-    minBtnCorner.CornerRadius = UDim.new(0, 8)
-    minBtnCorner.Parent = minimizeBtn
-    
-    local content = Instance.new("ScrollingFrame")
-    content.Name = "Content"
-    content.Size = UDim2.new(1, -20, 1, -80)
-    content.Position = UDim2.new(0, 10, 0, 70)
-    content.BackgroundTransparency = 1
-    content.BorderSizePixel = 0
-    content.ScrollBarThickness = 6
-    content.ScrollBarImageColor3 = Color3.fromRGB(230, 170, 50)
-    content.CanvasSize = UDim2.new(0, 0, 0, 0)
-    content.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    content.ZIndex = 2
-    content.Parent = mainFrame
-    
-    local layout = Instance.new("UIListLayout")
-    layout.Padding = UDim.new(0, 15)
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.Parent = content
-    
-    self:CreateFeatureToggle(content, "Instant Fishing", 1, {"Hook Delay", "Fishing Delay", "Cancel Delay"}, 
-        {0.06, 0.12, 0.05}, {0.01, 0.05, 0.01}, {0.25, 1.0, 0.25})
-    
-    self:CreateFeatureToggle(content, "Instant 2x Speed", 2, {"Fishing Delay", "Cancel Delay"}, 
-        {0.3, 0.05}, {0.0, 0.01}, {1.0, 0.2})
-    
-    local resizeHandle = Instance.new("Frame")
-    resizeHandle.Name = "ResizeHandle"
-    resizeHandle.Size = UDim2.new(0, 20, 0, 20)
-    resizeHandle.Position = UDim2.new(1, -20, 1, -20)
-    resizeHandle.BackgroundColor3 = Color3.fromRGB(230, 170, 50)
-    resizeHandle.ZIndex = 4
-    resizeHandle.Parent = mainFrame
-    
-    local resizeCorner = Instance.new("UICorner")
-    resizeCorner.CornerRadius = UDim.new(0, 5)
-    resizeCorner.Parent = resizeHandle
-    
-    local minimizedIcon = Instance.new("Frame")
-    minimizedIcon.Name = "MinimizedIcon"
-    minimizedIcon.Size = UDim2.new(0, 60, 0, 60)
-    minimizedIcon.Position = UDim2.new(0, 20, 0, 20)
-    minimizedIcon.BackgroundColor3 = Color3.fromRGB(255, 200, 80)
-    minimizedIcon.Visible = false
-    minimizedIcon.ZIndex = 5
-    minimizedIcon.Parent = gui
-    
-    local iconCorner = Instance.new("UICorner")
-    iconCorner.CornerRadius = UDim.new(0, 15)
-    iconCorner.Parent = minimizedIcon
-    
-    createBeeIcon(minimizedIcon, UDim2.new(0, 40, 0, 40), UDim2.new(0.5, 0, 0.5, 0))
-    
-    local iconButton = Instance.new("TextButton")
-    iconButton.Size = UDim2.new(1, 0, 1, 0)
-    iconButton.BackgroundTransparency = 1
-    iconButton.Text = ""
-    iconButton.ZIndex = 6
-    iconButton.Parent = minimizedIcon
-    
-    self:SetupDragging(header, mainFrame)
-    self:SetupMinimize(minimizeBtn, iconButton, mainFrame, minimizedIcon)
-    self:SetupResize(resizeHandle, mainFrame, content)
-    
-    return gui
+    return obj
 end
 
-function Keaby:CreateFeatureToggle(parent, featureName, layoutOrder, sliderNames, defaultValues, minValues, maxValues)
-    local featureFrame = Instance.new("Frame")
-    featureFrame.Name = featureName:gsub(" ", "")
-    featureFrame.Size = UDim2.new(1, -10, 0, 60)
-    featureFrame.BackgroundColor3 = Color3.fromRGB(255, 220, 100)
-    featureFrame.BorderSizePixel = 0
-    featureFrame.LayoutOrder = layoutOrder
-    featureFrame.ZIndex = 2
-    featureFrame.Parent = parent
-    
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 12)
-    corner.Parent = featureFrame
-    
-    createHexagon(featureFrame, UDim2.new(0, 30, 0, 30), UDim2.new(0, 8, 0, 15), Color3.fromRGB(255, 200, 70), 3)
-    
-    local nameLabel = Instance.new("TextLabel")
-    nameLabel.Size = UDim2.new(1, -100, 0, 30)
-    nameLabel.Position = UDim2.new(0, 45, 0, 5)
-    nameLabel.BackgroundTransparency = 1
-    nameLabel.Text = featureName
-    nameLabel.TextColor3 = Color3.fromRGB(100, 70, 30)
-    nameLabel.Font = Enum.Font.GothamBold
-    nameLabel.TextSize = 16
-    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
-    nameLabel.ZIndex = 3
-    nameLabel.Parent = featureFrame
-    
-    local statusLabel = Instance.new("TextLabel")
-    statusLabel.Name = "StatusLabel"
-    statusLabel.Size = UDim2.new(1, -100, 0, 20)
-    statusLabel.Position = UDim2.new(0, 45, 0, 32)
-    statusLabel.BackgroundTransparency = 1
-    statusLabel.Text = "OFF"
-    statusLabel.TextColor3 = Color3.fromRGB(200, 100, 100)
-    statusLabel.Font = Enum.Font.Gotham
-    statusLabel.TextSize = 12
-    statusLabel.TextXAlignment = Enum.TextXAlignment.Left
-    statusLabel.ZIndex = 3
-    statusLabel.Parent = featureFrame
-    
-    local toggleBtn = Instance.new("TextButton")
-    toggleBtn.Name = "ToggleButton"
-    toggleBtn.Size = UDim2.new(0, 70, 0, 35)
-    toggleBtn.Position = UDim2.new(1, -80, 0, 12)
-    toggleBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 100)
-    toggleBtn.Text = "OFF"
-    toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    toggleBtn.Font = Enum.Font.GothamBold
-    toggleBtn.TextSize = 14
-    toggleBtn.ZIndex = 3
-    toggleBtn.Parent = featureFrame
-    
-    local toggleCorner = Instance.new("UICorner")
-    toggleCorner.CornerRadius = UDim.new(0, 8)
-    toggleCorner.Parent = toggleBtn
-    
-    local slidersFrame = Instance.new("Frame")
-    slidersFrame.Name = "SlidersFrame"
-    slidersFrame.Size = UDim2.new(1, 0, 0, 0)
-    slidersFrame.Position = UDim2.new(0, 0, 0, 60)
-    slidersFrame.BackgroundTransparency = 1
-    slidersFrame.Visible = false
-    slidersFrame.ZIndex = 2
-    slidersFrame.Parent = featureFrame
-    
-    local sliderLayout = Instance.new("UIListLayout")
-    sliderLayout.Padding = UDim.new(0, 8)
-    sliderLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    sliderLayout.Parent = slidersFrame
-    
-    local sliderValues = {}
-    
-    for i, sliderName in ipairs(sliderNames) do
-        local slider = self:CreateSlider(slidersFrame, sliderName, defaultValues[i], minValues[i], maxValues[i], i)
-        sliderValues[sliderName] = defaultValues[i]
-        
-        slider.Changed:Connect(function(value)
-            sliderValues[sliderName] = value
-            
-            if featureName == "Instant Fishing" and self.InstantFishing and self.InstantFishing.Running then
-                self.InstantFishing.SetSettings({
-                    HookDelay = sliderValues["Hook Delay"],
-                    FishingDelay = sliderValues["Fishing Delay"],
-                    CancelDelay = sliderValues["Cancel Delay"]
-                })
-            elseif featureName == "Instant 2x Speed" and self.Instant2XSpeed and self.Instant2XSpeed.Running then
-                self.Instant2XSpeed.SetSettings({
-                    FishingDelay = sliderValues["Fishing Delay"],
-                    CancelDelay = sliderValues["Cancel Delay"]
-                })
-            end
-        end)
+-- Create ScreenGui
+local screenGui = new("ScreenGui", {Name = "KeabyGUI", ResetOnSpawn = false, Parent = localPlayer:WaitForChild("PlayerGui")})
+
+-- Modal blocker: full-screen transparent frame that captures input so underlying UI can't be touched
+local blocker = new("Frame", {
+    Parent = screenGui,
+    Size = UDim2.fromScale(1,1),
+    Position = UDim2.fromScale(0,0),
+    BackgroundTransparency = 1, -- invisible
+    ZIndex = 1,
+    Active = true, -- captures input
+})
+-- If you want a slight dark overlay behind GUI, uncomment:
+-- blocker.BackgroundTransparency = 0.4; blocker.BackgroundColor3 = Color3.fromRGB(0,0,0)
+
+-- Main window (hive-shaped look via rounded corners and honey colors)
+local window = new("Frame", {
+    Parent = screenGui,
+    Size = UDim2.new(0, 420, 0, 300),
+    Position = UDim2.new(0.5, -210, 0.4, -150),
+    BackgroundColor3 = Color3.fromRGB(220,165,50), -- madu
+    BackgroundTransparency = 0.12,
+    BorderSizePixel = 0,
+    ZIndex = 2,
+})
+new("UICorner", {Parent = window, CornerRadius = UDim.new(0, 18)})
+-- Add faint inner to look like honey gradient (Frame)
+local inner = new("Frame", {
+    Parent = window,
+    Size = UDim2.new(1, -6, 1, -6),
+    Position = UDim2.new(0, 3, 0, 3),
+    BackgroundColor3 = Color3.fromRGB(230,185,80),
+    BackgroundTransparency = 0.18,
+    BorderSizePixel = 0,
+    ZIndex = 3,
+})
+new("UICorner", {Parent = inner, CornerRadius = UDim.new(0, 16)})
+
+-- Header (draggable area) with small hive icon
+local header = new("Frame", {
+    Parent = inner,
+    Size = UDim2.new(1, 0, 0, 44),
+    Position = UDim2.new(0,0,0,0),
+    BackgroundTransparency = 1,
+    ZIndex = 4,
+})
+local title = new("TextLabel", {
+    Parent = header,
+    Size = UDim2.new(1, -90, 1, 0),
+    Position = UDim2.new(0, 12, 0, 0),
+    BackgroundTransparency = 1,
+    Text = "Keaby",
+    Font = Enum.Font.GothamBold,
+    TextSize = 20,
+    TextColor3 = Color3.fromRGB(40,20,0),
+    TextXAlignment = Enum.TextXAlignment.Left,
+    ZIndex = 5,
+})
+-- custom "hive" logo (no emoji)
+local function makeHiveIcon(parent, size)
+    local g = new("Frame", {
+        Parent = parent,
+        Size = UDim2.new(0, size, 0, size),
+        Position = UDim2.new(1, -54, 0.5, -size/2),
+        BackgroundColor3 = Color3.fromRGB(210,150,40),
+        BorderSizePixel = 0,
+        ZIndex = 5,
+    })
+    new("UICorner", {Parent = g, CornerRadius = UDim.new(1,0)})
+    -- little hexagon visual (approx)
+    local hex = new("ImageLabel", {
+        Parent = g,
+        Size = UDim2.fromScale(0.86,0.86),
+        Position = UDim2.fromScale(0.07,0.07),
+        BackgroundTransparency = 1,
+        Image = "", -- empty, using shapes
+        ZIndex = 6,
+    })
+    return g
+end
+local hiveIcon = makeHiveIcon(header, 36)
+
+-- Minimize button (small) and close (optional)
+local minBtn = new("TextButton", {
+    Parent = header,
+    Size = UDim2.new(0, 28, 0, 28),
+    Position = UDim2.new(1, -92, 0.5, -14),
+    BackgroundTransparency = 0,
+    BackgroundColor3 = Color3.fromRGB(200,140,30),
+    Text = "-",
+    Font = Enum.Font.GothamBold,
+    TextSize = 20,
+    TextColor3 = Color3.fromRGB(30,20,0),
+    ZIndex = 6,
+})
+new("UICorner", {Parent = minBtn, CornerRadius = UDim.new(0,6)})
+
+local closeBtn = new("TextButton", {
+    Parent = header,
+    Size = UDim2.new(0, 28, 0, 28),
+    Position = UDim2.new(1, -52, 0.5, -14),
+    BackgroundTransparency = 0,
+    BackgroundColor3 = Color3.fromRGB(180,60,40),
+    Text = "x",
+    Font = Enum.Font.GothamBold,
+    TextSize = 18,
+    TextColor3 = Color3.fromRGB(255,255,255),
+    ZIndex = 6,
+})
+new("UICorner", {Parent = closeBtn, CornerRadius = UDim.new(0,6)})
+
+-- Body area for features
+local body = new("Frame", {
+    Parent = inner,
+    Size = UDim2.new(1, -20, 1, -70),
+    Position = UDim2.new(0,10,0,54),
+    BackgroundTransparency = 1,
+    ZIndex = 4,
+})
+-- layout columns
+local leftCol = new("Frame", {Parent = body, Size = UDim2.new(0.5, -8, 1, 0), BackgroundTransparency = 1})
+local rightCol = new("Frame", {Parent = body, Size = UDim2.new(0.5, -8, 1, 0), Position = UDim2.new(0.5, 8, 0, 0), BackgroundTransparency = 1})
+
+-- UI helper: create toggle with label and callback
+local function createToggle(parent, labelText, default, callback)
+    local frame = new("Frame", {Parent = parent, Size = UDim2.new(1,0,0,48), BackgroundTransparency = 1})
+    local lbl = new("TextLabel", {
+        Parent = frame,
+        Size = UDim2.new(0.65,0,1,0),
+        BackgroundTransparency = 1,
+        Text = labelText,
+        Font = Enum.Font.Gotham,
+        TextSize = 15,
+        TextColor3 = Color3.fromRGB(35,20,0),
+        TextXAlignment = Enum.TextXAlignment.Left,
+    })
+    local btn = new("TextButton", {
+        Parent = frame,
+        Size = UDim2.new(0,60,0,28),
+        Position = UDim2.new(1, -68, 0.5, -14),
+        BackgroundColor3 = default and Color3.fromRGB(80,200,60) or Color3.fromRGB(170,170,170),
+        Text = default and "ON" or "OFF",
+        Font = Enum.Font.GothamBold,
+        TextSize = 14,
+        TextColor3 = Color3.fromRGB(255,255,255),
+    })
+    new("UICorner", {Parent = btn, CornerRadius = UDim.new(0,8)})
+    local state = default
+    btn.MouseButton1Click:Connect(function()
+        state = not state
+        btn.BackgroundColor3 = state and Color3.fromRGB(80,200,60) or Color3.fromRGB(170,170,170)
+        btn.Text = state and "ON" or "OFF"
+        pcall(callback, state)
+    end)
+    return frame
+end
+
+-- UI helper: slider (touch friendly)
+local function createSlider(parent, labelText, min, max, default, onChange)
+    local frame = new("Frame", {Parent = parent, Size = UDim2.new(1,0,0,56), BackgroundTransparency = 1})
+    local lbl = new("TextLabel", {
+        Parent = frame,
+        Size = UDim2.new(1,0,0,20),
+        Position = UDim2.new(0,0,0,0),
+        BackgroundTransparency = 1,
+        Text = string.format("%s: %.2fs", labelText, default),
+        Font = Enum.Font.Gotham,
+        TextSize = 14,
+        TextColor3 = Color3.fromRGB(40,20,0),
+        TextXAlignment = Enum.TextXAlignment.Left,
+    })
+    local barBg = new("Frame", {
+        Parent = frame,
+        Size = UDim2.new(1,0,0,10),
+        Position = UDim2.new(0,0,0,30),
+        BackgroundColor3 = Color3.fromRGB(210,170,80),
+        BackgroundTransparency = 0.25,
+        BorderSizePixel = 0,
+    })
+    new("UICorner", {Parent = barBg, CornerRadius = UDim.new(1,0)})
+    local fill = new("Frame", {Parent = barBg, Size = UDim2.new((default-min)/(max-min),0,1,0), BackgroundColor3 = Color3.fromRGB(120,200,60)})
+    new("UICorner", {Parent = fill, CornerRadius = UDim.new(1,0)})
+    -- Input handling
+    local dragging = false
+    local function updateFromPos(absX)
+        local rel = math.clamp((absX - barBg.AbsolutePosition.X) / barBg.AbsoluteSize.X, 0, 1)
+        local val = min + (max-min) * rel
+        val = math.floor(val * 100) / 100
+        fill.Size = UDim2.new(rel,0,1,0)
+        lbl.Text = string.format("%s: %.2fs", labelText, val)
+        pcall(onChange, val)
     end
-    
-    local isActive = false
-    toggleBtn.MouseButton1Click:Connect(function()
-        isActive = not isActive
-        
-        if isActive then
-            toggleBtn.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
-            toggleBtn.Text = "ON"
-            statusLabel.Text = "ON"
-            statusLabel.TextColor3 = Color3.fromRGB(100, 200, 100)
-            
-            slidersFrame.Visible = true
-            local newHeight = 60 + (#sliderNames * 45) + ((#sliderNames - 1) * 8) + 10
-            featureFrame:TweenSize(UDim2.new(1, -10, 0, newHeight), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
-            
-            if featureName == "Instant Fishing" then
-                if not self.InstantFishing then
-                    self.InstantFishing = loadFromGitHub("FungsiKeaby/InstantFishing.lua")
-                end
-                if self.InstantFishing then
-                    self.InstantFishing.SetSettings({
-                        HookDelay = sliderValues["Hook Delay"],
-                        FishingDelay = sliderValues["Fishing Delay"],
-                        CancelDelay = sliderValues["Cancel Delay"]
-                    })
-                    self.InstantFishing.Start()
-                end
-            elseif featureName == "Instant 2x Speed" then
-                if not self.Instant2XSpeed then
-                    self.Instant2XSpeed = loadFromGitHub("FungsiKeaby/Instant2Xspeed.lua")
-                end
-                if self.Instant2XSpeed then
-                    self.Instant2XSpeed.SetSettings({
-                        FishingDelay = sliderValues["Fishing Delay"],
-                        CancelDelay = sliderValues["Cancel Delay"]
-                    })
-                    self.Instant2XSpeed.Start()
-                end
-            end
-        else
-            toggleBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 100)
-            toggleBtn.Text = "OFF"
-            statusLabel.Text = "OFF"
-            statusLabel.TextColor3 = Color3.fromRGB(200, 100, 100)
-            
-            slidersFrame.Visible = false
-            featureFrame:TweenSize(UDim2.new(1, -10, 0, 60), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
-            
-            if featureName == "Instant Fishing" and self.InstantFishing then
-                self.InstantFishing.Stop()
-            elseif featureName == "Instant 2x Speed" and self.Instant2XSpeed then
-                self.Instant2XSpeed.Stop()
-            end
+    barBg.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            updateFromPos(input.Position.X)
         end
     end)
-end
-
-function Keaby:CreateSlider(parent, name, defaultValue, minValue, maxValue, layoutOrder)
-    local sliderFrame = Instance.new("Frame")
-    sliderFrame.Name = name:gsub(" ", "")
-    sliderFrame.Size = UDim2.new(1, -10, 0, 45)
-    sliderFrame.BackgroundTransparency = 1
-    sliderFrame.LayoutOrder = layoutOrder
-    sliderFrame.ZIndex = 2
-    sliderFrame.Parent = parent
-    
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, 0, 0, 18)
-    label.BackgroundTransparency = 1
-    label.Text = name .. ": " .. string.format("%.2fs", defaultValue)
-    label.TextColor3 = Color3.fromRGB(100, 70, 30)
-    label.Font = Enum.Font.Gotham
-    label.TextSize = 12
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.ZIndex = 3
-    label.Parent = sliderFrame
-    
-    local sliderBg = Instance.new("Frame")
-    sliderBg.Size = UDim2.new(1, 0, 0, 8)
-    sliderBg.Position = UDim2.new(0, 0, 0, 23)
-    sliderBg.BackgroundColor3 = Color3.fromRGB(230, 170, 50)
-    sliderBg.BorderSizePixel = 0
-    sliderBg.ZIndex = 3
-    sliderBg.Parent = sliderFrame
-    
-    local sliderBgCorner = Instance.new("UICorner")
-    sliderBgCorner.CornerRadius = UDim.new(1, 0)
-    sliderBgCorner.Parent = sliderBg
-    
-    local fill = Instance.new("Frame")
-    fill.Size = UDim2.new((defaultValue - minValue) / (maxValue - minValue), 0, 1, 0)
-    fill.BackgroundColor3 = Color3.fromRGB(255, 200, 70)
-    fill.BorderSizePixel = 0
-    fill.ZIndex = 4
-    fill.Parent = sliderBg
-    
-    local fillCorner = Instance.new("UICorner")
-    fillCorner.CornerRadius = UDim.new(1, 0)
-    fillCorner.Parent = fill
-    
-    local button = Instance.new("TextButton")
-    button.Size = UDim2.new(1, 0, 3, 0)
-    button.Position = UDim2.new(0, 0, -1, 0)
-    button.BackgroundTransparency = 1
-    button.Text = ""
-    button.ZIndex = 5
-    button.Parent = sliderBg
-    
-    local currentValue = defaultValue
-    local dragging = false
-    
-    local function updateSlider(input)
-        local relativeX = math.clamp((input.Position.X - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X, 0, 1)
-        currentValue = minValue + (maxValue - minValue) * relativeX
-        currentValue = math.floor(currentValue * 100) / 100
-        fill.Size = UDim2.new(relativeX, 0, 1, 0)
-        label.Text = name .. ": " .. string.format("%.2fs", currentValue)
-    end
-    
-    button.MouseButton1Down:Connect(function()
-        dragging = true
-    end)
-    
-    button.TouchLongPress:Connect(function()
-        dragging = true
-    end)
-    
     UserInputService.InputChanged:Connect(function(input)
         if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            updateSlider(input)
+            updateFromPos(input.Position.X)
         end
     end)
-    
     UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
             dragging = false
         end
     end)
-    
-    button.MouseButton1Click:Connect(function(x, y)
-        local mousePos = UserInputService:GetMouseLocation()
-        updateSlider({Position = Vector2.new(mousePos.X, mousePos.Y)})
-    end)
-    
-    button.TouchTap:Connect(function(touchPos)
-        updateSlider({Position = touchPos[1]})
-    end)
-    
-    local sliderObj = {}
-    sliderObj.Changed = Instance.new("BindableEvent")
-    
-    task.spawn(function()
-        local lastValue = currentValue
-        while sliderFrame.Parent do
-            if currentValue ~= lastValue then
-                sliderObj.Changed:Fire(currentValue)
-                lastValue = currentValue
-            end
-            task.wait(0.1)
-        end
-    end)
-    
-    return sliderObj
+    return frame
 end
 
-function Keaby:SetupDragging(header, mainFrame)
-    local dragging = false
-    local dragInput, mousePos, framePos
-    
-    local function update(input)
-        local delta = input.Position - mousePos
-        mainFrame.Position = UDim2.new(
-            framePos.X.Scale,
-            framePos.X.Offset + delta.X,
-            framePos.Y.Scale,
-            framePos.Y.Offset + delta.Y
-        )
+-- Feature storage
+local loadedFeatures = {
+    Instant = {module = nil, instance = nil},
+    Instant2X = {module = nil, instance = nil},
+}
+
+-- ---------- Build UI contents ----------
+-- Left column: Instant Fishing (toggle + 3 sliders)
+local instantFrame = new("Frame", {Parent = leftCol, Size = UDim2.new(1,0,0,220), BackgroundTransparency = 1})
+local instantToggle, instantSliders
+instantToggle = createToggle(instantFrame, "Instant Fishing", false, function(enabled)
+    if enabled then
+        -- load module if not loaded
+        if not loadedFeatures.Instant.module then
+            local mod, err = safeLoadFeature("Instant.lua")
+            if not mod then
+                warn("Keaby: failed to load Instant.lua:", err)
+                return
+            end
+            loadedFeatures.Instant.module = mod
+        end
+        local mod = loadedFeatures.Instant.module
+        -- apply settings from slider values
+        mod.Settings = mod.Settings or {}
+        -- read slider values if exist; default fallback
+        local hook, fish, cancel = 0.06, 0.12, 0.05
+        if instantSliders then
+            hook = instantSliders.hookVal or hook
+            fish = instantSliders.fishVal or fish
+            cancel = instantSliders.cancelVal or cancel
+        end
+        mod.Settings.HookDelay = hook
+        mod.Settings.FishingDelay = fish
+        mod.Settings.CancelDelay = cancel
+        -- store instance reference (many modules return table)
+        loadedFeatures.Instant.instance = mod
+        if mod.Start then pcall(mod.Start, mod) end
+    else
+        if loadedFeatures.Instant.instance and loadedFeatures.Instant.instance.Stop then
+            pcall(loadedFeatures.Instant.instance.Stop, loadedFeatures.Instant.instance)
+        end
     end
-    
+end)
+
+-- sliders for instant fishing
+instantSliders = {}
+local s1 = createSlider(instantFrame, "Hook Delay", 0.01, 0.25, 0.06, function(val) instantSliders.hookVal = val end)
+s1.Position = UDim2.new(0,0,0,48)
+local s2 = createSlider(instantFrame, "Fishing Delay", 0.05, 1.0, 0.12, function(val) instantSliders.fishVal = val end)
+s2.Position = UDim2.new(0,0,0,104)
+local s3 = createSlider(instantFrame, "Cancel Delay", 0.01, 0.25, 0.05, function(val) instantSliders.cancelVal = val end)
+s3.Position = UDim2.new(0,0,0,160)
+
+-- Right column: Instant 2x Speed (toggle + 2 sliders)
+local twoXFrame = new("Frame", {Parent = rightCol, Size = UDim2.new(1,0,0,160), BackgroundTransparency = 1})
+local twoXSliders = {}
+createToggle(twoXFrame, "Instant 2x Speed", false, function(enabled)
+    if enabled then
+        if not loadedFeatures.Instant2X.module then
+            local mod, err = safeLoadFeature("Instant2Xspeed.lua")
+            if not mod then warn("Keaby: failed to load Instant2Xspeed.lua:",err) return end
+            loadedFeatures.Instant2X.module = mod
+        end
+        local mod = loadedFeatures.Instant2X.module
+        mod.Settings = mod.Settings or {}
+        mod.Settings.FishingDelay = twoXSliders.fishVal or mod.Settings.FishingDelay or 0.3
+        mod.Settings.CancelDelay = twoXSliders.cancelVal or mod.Settings.CancelDelay or 0.05
+        loadedFeatures.Instant2X.instance = mod
+        if mod.Start then pcall(mod.Start, mod) end
+    else
+        if loadedFeatures.Instant2X.instance and loadedFeatures.Instant2X.instance.Stop then
+            pcall(loadedFeatures.Instant2X.instance.Stop, loadedFeatures.Instant2X.instance)
+        end
+    end
+end)
+
+local sx1 = createSlider(twoXFrame, "Fishing Delay", 0.0, 1.0, 0.3, function(val) twoXSliders.fishVal = val end)
+sx1.Position = UDim2.new(0,0,0,48)
+local sx2 = createSlider(twoXFrame, "Cancel Delay", 0.01, 0.2, 0.05, function(val) twoXSliders.cancelVal = val end)
+sx2.Position = UDim2.new(0,0,0,104)
+
+-- Footer / extra: a small note
+local footer = new("TextLabel", {
+    Parent = inner,
+    Size = UDim2.new(1, -20, 0, 22),
+    Position = UDim2.new(0, 10, 1, -28),
+    BackgroundTransparency = 1,
+    Text = "Keaby • Bee themed UI — Mobile & PC friendly",
+    Font = Enum.Font.Gotham,
+    TextSize = 12,
+    TextColor3 = Color3.fromRGB(45,25,0),
+    TextXAlignment = Enum.TextXAlignment.Left,
+    ZIndex = 5,
+})
+
+-- ---------- Window behavior: drag, minimize, resize ----------
+-- Dragging
+do
+    local dragging = false
+    local dragStartPos, startPos
     header.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
-            mousePos = input.Position
-            framePos = mainFrame.Position
-            
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
+            dragStartPos = input.Position
+            startPos = window.Position
         end
     end)
-    
     UserInputService.InputChanged:Connect(function(input)
         if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            update(input)
+            local delta = input.Position - dragStartPos
+            window.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+            dragging = false
         end
     end)
 end
 
-function Keaby:SetupMinimize(minimizeBtn, iconButton, mainFrame, minimizedIcon)
-    minimizeBtn.MouseButton1Click:Connect(function()
-        self.Minimized = true
-        mainFrame.Visible = false
-        minimizedIcon.Visible = true
-    end)
-    
-    iconButton.MouseButton1Click:Connect(function()
-        self.Minimized = false
-        mainFrame.Visible = true
-        minimizedIcon.Visible = false
-    end)
-end
-
-function Keaby:SetupResize(resizeHandle, mainFrame, content)
-    local resizing = false
-    local startSize, startPos
-    
-    resizeHandle.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            resizing = true
-            startSize = mainFrame.Size
-            startPos = input.Position
-            
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    resizing = false
-                end
-            end)
+-- Minimize behavior: reduce to icon
+local minimized = false
+local savedSize, savedPos
+minBtn.MouseButton1Click:Connect(function()
+    if not minimized then
+        savedSize, savedPos = window.Size, window.Position
+        window:TweenSizeAndPosition(UDim2.new(0,48,0,48), UDim2.new(0,10,0,10), "Out", "Quad", 0.18, true)
+        -- hide inner contents (keep icon visible)
+        for _,v in pairs(inner:GetChildren()) do
+            if v ~= header and v ~= footer then v.Visible = false end
         end
-    end)
-    
-    UserInputService.InputChanged:Connect(function(input)
-        if resizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position - startPos
-            local newWidth = math.max(300, startSize.X.Offset + delta.X)
-            local newHeight = math.max(300, startSize.Y.Offset + delta.Y)
-            mainFrame.Size = UDim2.new(0, newWidth, 0, newHeight)
-        end
-    end)
-end
+        minimized = true
+    else
+        -- restore
+        window:TweenSizeAndPosition(savedSize, savedPos, "Out", "Quad", 0.18, true)
+        for _,v in pairs(inner:GetChildren()) do v.Visible = true end
+        minimized = false
+    end
+end)
 
-function Keaby:Destroy()
-    if self.InstantFishing then
-        self.InstantFishing.Stop()
-    end
-    if self.Instant2XSpeed then
-        self.Instant2XSpeed.Stop()
-    end
-    if self.GUI then
-        self.GUI:Destroy()
-    end
-end
+-- Close simply destroys GUI
+closeBtn.MouseButton1Click:Connect(function()
+    screenGui:Destroy()
+end)
 
-Keaby:CreateGUI()
-print("[Keaby] GUI loaded successfully!")
-return Keaby
+-- Resizer (corner)
+local resizer = new("Frame", {
+    Parent = window,
+    Size = UDim2.new(0,16,0,16),
+    Position = UDim2.new(1, -18, 1, -18),
+    BackgroundTransparency = 1,
+    ZIndex = 6,
+})
+local grip = new("ImageLabel", {Parent = resizer, Size = UDim2.new(1,1,1,1), BackgroundTransparency = 0.3, BackgroundColor3 = Color3.fromRGB(200,140,40)})
+new("UICorner", {Parent = grip, CornerRadius = UDim.new(0,6)})
+local resizing = false
+local startSize, startPos, startMouse
+resizer.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        resizing = true
+        startSize = window.Size
+        startMouse = input.Position
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if resizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - startMouse
+        local newW = math.clamp(startSize.X.Offset + delta.X, 240, 900)
+        local newH = math.clamp(startSize.Y.Offset + delta.Y, 160, 700)
+        window.Size = UDim2.new(0, newW, 0, newH)
+    end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if resizing and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+        resizing = false
+    end
+end)
+
+-- Ensure blocker sits behind window but intercepts input
+blocker.ZIndex = 1
+window.ZIndex = 2
+
+-- After loading GUI, automatically show main (already visible). Focus mobile input off game
+-- (No extra code needed - the UI is ready)
+
+-- Helpful log
+print("Keaby GUI loaded — main shown")
+
+-- Return screenGui for external control if executed as module
+return screenGui
