@@ -1,13 +1,10 @@
+-- Instant2Xspeed.lua (cleaned) -- ULTRA SPEED AUTO FISHING (GUI removed)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
 local localPlayer = Players.LocalPlayer
 
-local netFolder = ReplicatedStorage
-    :WaitForChild("Packages")
-    :WaitForChild("_Index")
-    :WaitForChild("sleitnick_net@0.2.0")
-    :WaitForChild("net")
-
+local netFolder = ReplicatedStorage:WaitForChild("Packages"):WaitForChild("_Index"):WaitForChild("sleitnick_net@0.2.0"):WaitForChild("net")
 local RF_ChargeFishingRod = netFolder:WaitForChild("RF/ChargeFishingRod")
 local RF_RequestMinigame = netFolder:WaitForChild("RF/RequestFishingMinigameStarted")
 local RF_CancelFishingInputs = netFolder:WaitForChild("RF/CancelFishingInputs")
@@ -15,127 +12,94 @@ local RE_FishingCompleted = netFolder:WaitForChild("RE/FishingCompleted")
 local RE_MinigameChanged = netFolder:WaitForChild("RE/FishingMinigameChanged")
 local RE_FishCaught = netFolder:WaitForChild("RE/FishCaught")
 
-local Instant2XSpeed = {
+local fishing = {
     Running = false,
     WaitingHook = false,
     CurrentCycle = 0,
     TotalFish = 0,
+    ToggleKey = "F",
     Settings = {
         FishingDelay = 0.3,
         CancelDelay = 0.05,
     },
-    OnFishCaught = nil,
-    OnStatusChanged = nil
 }
+_G.FishingScript = fishing
 
-local function log(msg)
-    print(("[Instant2XSpeed] %s"):format(msg))
-end
+local function log(msg) print(("[Fishing] %s"):format(msg)) end
 
 RE_MinigameChanged.OnClientEvent:Connect(function(state)
-    if Instant2XSpeed.WaitingHook and typeof(state) == "string" and string.find(string.lower(state), "hook") then
-        Instant2XSpeed.WaitingHook = false
-        
+    if fishing.WaitingHook and typeof(state) == "string" and string.find(string.lower(state), "hook") then
+        fishing.WaitingHook = false
         task.wait(0.30)
         RE_FishingCompleted:FireServer()
-        log("Hook detected - fish pulled")
-        
-        task.wait(Instant2XSpeed.Settings.CancelDelay)
-        pcall(function()
-            RF_CancelFishingInputs:InvokeServer()
-            log("Cancel inputs - quick reset")
-        end)
-        
-        task.wait(Instant2XSpeed.Settings.FishingDelay)
-        if Instant2XSpeed.Running then
-            Instant2XSpeed.Cast()
-        end
+        log("✅ Hook terdeteksi — ikan ditarik.")
+        task.wait(fishing.Settings.CancelDelay)
+        pcall(function() RF_CancelFishingInputs:InvokeServer() end)
+        task.wait(fishing.Settings.FishingDelay)
+        if fishing.Running then fishing.Cast() end
     end
 end)
 
 RE_FishCaught.OnClientEvent:Connect(function(name, data)
-    if Instant2XSpeed.Running then
-        Instant2XSpeed.WaitingHook = false
-        Instant2XSpeed.TotalFish = Instant2XSpeed.TotalFish + 1
-        local weight = data and data.Weight or 0
-        log("Fish caught: " .. tostring(name) .. " (" .. string.format("%.2f", weight) .. " kg)")
-        
-        if Instant2XSpeed.OnFishCaught then
-            Instant2XSpeed.OnFishCaught(Instant2XSpeed.TotalFish, name, weight)
-        end
-        
-        task.wait(Instant2XSpeed.Settings.CancelDelay)
-        pcall(function()
-            RF_CancelFishingInputs:InvokeServer()
-            log("Cancel inputs - quick reset")
-        end)
-        
-        task.wait(Instant2XSpeed.Settings.FishingDelay)
-        if Instant2XSpeed.Running then
-            Instant2XSpeed.Cast()
-        end
+    if fishing.Running then
+        fishing.WaitingHook = false
+        fishing.TotalFish = fishing.TotalFish + 1
+        log("🐟 Ikan tertangkap: " .. tostring(name))
+        task.wait(fishing.Settings.CancelDelay)
+        pcall(function() RF_CancelFishingInputs:InvokeServer() end)
+        task.wait(fishing.Settings.FishingDelay)
+        if fishing.Running then fishing.Cast() end
     end
 end)
 
-function Instant2XSpeed.Cast()
-    if not Instant2XSpeed.Running or Instant2XSpeed.WaitingHook then return end
-    
-    Instant2XSpeed.CurrentCycle = Instant2XSpeed.CurrentCycle + 1
-    
+function fishing.Cast()
+    if not fishing.Running or fishing.WaitingHook then return end
+    fishing.CurrentCycle = fishing.CurrentCycle + 1
     pcall(function()
         RF_ChargeFishingRod:InvokeServer({[22] = tick()})
-        log("Cast sent")
+        log("⚡ Lempar pancing.")
         task.wait(0.07)
-
         RF_RequestMinigame:InvokeServer(9, 0, tick())
-        log("Waiting for hook...")
-        Instant2XSpeed.WaitingHook = true
-
+        log("🎯 Menunggu hook...")
+        fishing.WaitingHook = true
         task.delay(1.1, function()
-            if Instant2XSpeed.WaitingHook and Instant2XSpeed.Running then
-                Instant2XSpeed.WaitingHook = false
+            if fishing.WaitingHook and fishing.Running then
+                fishing.WaitingHook = false
                 RE_FishingCompleted:FireServer()
-                log("Timeout - quick fallback pull")
-                
-                task.wait(Instant2XSpeed.Settings.CancelDelay)
-                pcall(function()
-                    RF_CancelFishingInputs:InvokeServer()
-                    log("Cancel timeout - quick reset")
-                end)
-                
-                task.wait(Instant2XSpeed.Settings.FishingDelay)
-                if Instant2XSpeed.Running then
-                    Instant2XSpeed.Cast()
-                end
+                log("⚠️ Timeout pendek — fallback tarik cepat.")
+                task.wait(fishing.Settings.CancelDelay)
+                pcall(function() RF_CancelFishingInputs:InvokeServer() end)
+                task.wait(fishing.Settings.FishingDelay)
+                if fishing.Running then fishing.Cast() end
             end
         end)
     end)
 end
 
-function Instant2XSpeed.Start()
-    if Instant2XSpeed.Running then return end
-    Instant2XSpeed.Running = true
-    Instant2XSpeed.CurrentCycle = 0
-    Instant2XSpeed.TotalFish = 0
-    log("Started")
-    if Instant2XSpeed.OnStatusChanged then
-        Instant2XSpeed.OnStatusChanged(true)
+function fishing.Start()
+    if fishing.Running then return end
+    fishing.Running = true
+    fishing.CurrentCycle = 0
+    fishing.TotalFish = 0
+    log("🚀 FISHING STARTED!")
+    fishing.Cast()
+end
+
+function fishing.Stop()
+    fishing.Running = false
+    fishing.WaitingHook = false
+    log("🛑 FISHING STOPPED")
+end
+
+function fishing.Toggle()
+    if fishing.Running then fishing.Stop() else fishing.Start() end
+end
+
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    if input.KeyCode == Enum.KeyCode[fishing.ToggleKey] and input.UserInputType == Enum.UserInputType.Keyboard then
+        fishing.Toggle()
     end
-    Instant2XSpeed.Cast()
-end
+end)
 
-function Instant2XSpeed.Stop()
-    Instant2XSpeed.Running = false
-    Instant2XSpeed.WaitingHook = false
-    log("Stopped")
-    if Instant2XSpeed.OnStatusChanged then
-        Instant2XSpeed.OnStatusChanged(false)
-    end
-end
-
-function Instant2XSpeed.SetSettings(settings)
-    if settings.FishingDelay then Instant2XSpeed.Settings.FishingDelay = settings.FishingDelay end
-    if settings.CancelDelay then Instant2XSpeed.Settings.CancelDelay = settings.CancelDelay end
-end
-
-return Instant2XSpeed
+return fishing
