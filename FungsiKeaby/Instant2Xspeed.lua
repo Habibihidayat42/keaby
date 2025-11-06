@@ -1,10 +1,11 @@
--- Instant2Xspeed.lua (cleaned) -- ULTRA SPEED AUTO FISHING (GUI removed)
+-- Instant2Xspeed.lua (no toggle key) - ULTRA SPEED AUTO FISHING
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
 local localPlayer = Players.LocalPlayer
 
-local netFolder = ReplicatedStorage:WaitForChild("Packages"):WaitForChild("_Index"):WaitForChild("sleitnick_net@0.2.0"):WaitForChild("net")
+local netFolder = ReplicatedStorage:WaitForChild("Packages"):WaitForChild("_Index")
+    :WaitForChild("sleitnick_net@0.2.0"):WaitForChild("net")
+
 local RF_ChargeFishingRod = netFolder:WaitForChild("RF/ChargeFishingRod")
 local RF_RequestMinigame = netFolder:WaitForChild("RF/RequestFishingMinigameStarted")
 local RF_CancelFishingInputs = netFolder:WaitForChild("RF/CancelFishingInputs")
@@ -17,7 +18,6 @@ local fishing = {
     WaitingHook = false,
     CurrentCycle = 0,
     TotalFish = 0,
-    ToggleKey = "F",
     Settings = {
         FishingDelay = 0.3,
         CancelDelay = 0.05,
@@ -25,7 +25,9 @@ local fishing = {
 }
 _G.FishingScript = fishing
 
-local function log(msg) print(("[Fishing] %s"):format(msg)) end
+local function log(msg)
+    print("[Fishing] " .. msg)
+end
 
 RE_MinigameChanged.OnClientEvent:Connect(function(state)
     if fishing.WaitingHook and typeof(state) == "string" and string.find(string.lower(state), "hook") then
@@ -90,16 +92,5 @@ function fishing.Stop()
     fishing.WaitingHook = false
     log("🛑 FISHING STOPPED")
 end
-
-function fishing.Toggle()
-    if fishing.Running then fishing.Stop() else fishing.Start() end
-end
-
-UserInputService.InputBegan:Connect(function(input, processed)
-    if processed then return end
-    if input.KeyCode == Enum.KeyCode[fishing.ToggleKey] and input.UserInputType == Enum.UserInputType.Keyboard then
-        fishing.Toggle()
-    end
-end)
 
 return fishing
