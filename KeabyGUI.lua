@@ -21,8 +21,8 @@ end
 -- =====================================================
 -- LOAD FISHING FUNCTIONS FROM FOLDER FungsiKeaby
 -- =====================================================
-local instant = loadfile("FungsiKeaby/Instant.lua")()
-local instant2x = loadfile("FungsiKeaby/Instant2Xspeed.lua")()
+local instant = loadfile("Keaby/FungsiKeaby/Instant.lua")()
+local instant2x = loadfile("Keaby/FungsiKeaby/Instant2Xspeed.lua")()
 
 -- =====================================================
 -- GUI CREATION
