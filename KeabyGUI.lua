@@ -1,16 +1,36 @@
--- SAFE INIT (XENO FIX)
-repeat task.wait() until game and game.GetService
-local loaded = false
+-- 🛡️ Xeno Safe Bootstrap (delayed GUI initialization)
+local Players, RunService, StarterGui
+
 repeat
-    task.wait(0.5)
+    task.wait()
     local ok = pcall(function()
-        local p = game:GetService("Players")
-        local lp = p.LocalPlayer
-        local g = lp:FindFirstChildOfClass("PlayerGui")
-        return (lp and g)
+        Players = game:GetService("Players")
+        RunService = game:GetService("RunService")
+        StarterGui = game:GetService("StarterGui")
     end)
-    loaded = ok
-until loaded
+until ok and Players and RunService and StarterGui
+
+-- Wait for LocalPlayer and CoreGui access
+local localPlayer = nil
+repeat
+    task.wait()
+    local ok2, res = pcall(function()
+        localPlayer = Players.LocalPlayer
+        return localPlayer and localPlayer:FindFirstChildOfClass("PlayerGui")
+    end)
+until ok2 and res
+
+-- Double-verify by calling SetCore safely
+local ready = false
+repeat
+    local ok3 = pcall(function()
+        StarterGui:SetCore("SendNotification", {Title="KeabyUI", Text="Initializing...", Duration=1})
+    end)
+    if ok3 then ready = true end
+    task.wait(0.5)
+until ready
+
+-- Now that core modules are truly loaded, continue GUI creation
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
