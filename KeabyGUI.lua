@@ -1,10 +1,25 @@
--- KeabyGUI_v2.3.lua
--- Single-file Safe Mode
--- Flat matte honey theme, sidebar, sliders, toggles, minimize -> draggable bee icon
--- Loads feature modules from GitHub raw if local files not available.
--- Place this single file in your executor and run it. Requires internet if local files absent.
+-- SAFE INIT (XENO FIX)
+repeat task.wait() until game and game.GetService
+local loaded = false
+repeat
+    task.wait(0.5)
+    local ok = pcall(function()
+        local p = game:GetService("Players")
+        local lp = p.LocalPlayer
+        local g = lp:FindFirstChildOfClass("PlayerGui")
+        return (lp and g)
+    end)
+    loaded = ok
+until loaded
 
--- Safety/wait: ensure game and PlayerGui ready to avoid "Could not find a CoreModule"
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
+local localPlayer = Players.LocalPlayer
+local playerGui = localPlayer:FindFirstChildOfClass("PlayerGui") or localPlayer:WaitForChild("PlayerGui")
+
 repeat task.wait() until game:IsLoaded()
 
 local Players = game:GetService("Players")
