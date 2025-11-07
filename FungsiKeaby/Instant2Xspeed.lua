@@ -64,9 +64,9 @@ function fishing.Cast()
         RF_RequestMinigame:InvokeServer(9, 0, tick())
         log("🎯 Menunggu hook...")
         fishing.WaitingHook = false
-        task.delay(1.1, function()
+        task.delay(0.5, function()
             if fishing.WaitingHook and fishing.Running then
-                fishing.WaitingHook = false
+                fishing.WaitingHook = true
                 RE_FishingCompleted:FireServer()
                 log("⚠️ Timeout pendek — fallback tarik cepat.")
                 task.wait(fishing.Settings.CancelDelay)
