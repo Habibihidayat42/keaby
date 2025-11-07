@@ -15,7 +15,7 @@ local RE_FishCaught = netFolder:WaitForChild("RE/FishCaught")
 
 local fishing = {
     Running = false,
-    WaitingHook = false,
+    WaitingHook = 1.1,
     TotalFish = 0,
     Settings = {
         FishingDelay = 0.12,
