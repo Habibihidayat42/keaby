@@ -19,9 +19,10 @@ local fishing = {
     CurrentCycle = 0,
     TotalFish = 0,
     Settings = {
-        FishingDelay = 0.12, -- lebih cepat
-        CancelDelay = 0.05,
-        HookFallback = 0.8, -- timeout fallback lebih pendek tapi aman
+        FishingDelay = 0.12,       -- delay antar cast
+        CancelDelay = 0.05,        -- delay cancel
+        HookFallback = 0.8,        -- timeout fallback hook
+        RetryDelay = 0.05,         -- delay retry jika server gagal
     },
 }
 _G.FishingScript = fishing
@@ -30,53 +31,65 @@ local function log(msg)
     print("[Fishing] " .. msg)
 end
 
--- Minigame hook terdeteksi
+-- Utility retry untuk invoke server
+local function SafeInvoke(RF, ...)
+    local success, result = pcall(RF.InvokeServer, RF, ...)
+    if not success then
+        task.wait(fishing.Settings.RetryDelay)
+        pcall(RF.InvokeServer, RF, ...)
+    end
+    return result
+end
+
+-- Event: Minigame hook terdeteksi
 RE_MinigameChanged.OnClientEvent:Connect(function(state)
     if fishing.WaitingHook and typeof(state) == "string" and string.find(string.lower(state), "hook") then
         fishing.WaitingHook = false
         task.wait(0.06)
-        RE_FishingCompleted:FireServer()
+        SafeInvoke(RE_FishingCompleted)
         log("✅ Hook terdeteksi — ikan ditarik.")
         task.wait(fishing.Settings.CancelDelay)
-        pcall(RF_CancelFishingInputs.InvokeServer, RF_CancelFishingInputs)
+        SafeInvoke(RF_CancelFishingInputs)
         task.wait(fishing.Settings.FishingDelay)
         if fishing.Running then fishing.Cast() end
     end
 end)
 
--- Ikan tertangkap
+-- Event: Ikan tertangkap
 RE_FishCaught.OnClientEvent:Connect(function(name, data)
     if fishing.Running then
         fishing.WaitingHook = false
         fishing.TotalFish = fishing.TotalFish + 1
         log("🐟 Ikan tertangkap: " .. tostring(name))
         task.wait(fishing.Settings.CancelDelay)
-        pcall(RF_CancelFishingInputs.InvokeServer, RF_CancelFishingInputs)
+        SafeInvoke(RF_CancelFishingInputs)
         task.wait(fishing.Settings.FishingDelay)
         if fishing.Running then fishing.Cast() end
     end
 end)
 
+-- Fungsi cast pancing
 function fishing.Cast()
     if not fishing.Running or fishing.WaitingHook then return end
     fishing.CurrentCycle = fishing.CurrentCycle + 1
 
     pcall(function()
-        RF_ChargeFishingRod:InvokeServer({[22] = tick()})
+        SafeInvoke(RF_ChargeFishingRod, {[22] = tick()})
         log("⚡ Lempar pancing.")
         task.wait(0.06)
-        RF_RequestMinigame:InvokeServer(9, 0, tick())
+        SafeInvoke(RF_RequestMinigame, 9, 0, tick())
         log("🎯 Menunggu hook...")
         fishing.WaitingHook = true
+        local castStart = tick()
 
-        -- fallback timeout jika hook tidak terdeteksi
+        -- fallback adaptif jika hook tidak terdeteksi
         task.delay(fishing.Settings.HookFallback, function()
             if fishing.WaitingHook and fishing.Running then
                 fishing.WaitingHook = false
-                RE_FishingCompleted:FireServer()
-                log("⚠️ Timeout fallback — tarik cepat.")
+                SafeInvoke(RE_FishingCompleted)
+                log("⚠️ Timeout fallback ("..string.format("%.2f", tick()-castStart).."s) — tarik cepat.")
                 task.wait(fishing.Settings.CancelDelay)
-                pcall(RF_CancelFishingInputs.InvokeServer, RF_CancelFishingInputs)
+                SafeInvoke(RF_CancelFishingInputs)
                 task.wait(fishing.Settings.FishingDelay)
                 if fishing.Running then fishing.Cast() end
             end
@@ -84,6 +97,7 @@ function fishing.Cast()
     end)
 end
 
+-- Start fishing
 function fishing.Start()
     if fishing.Running then return end
     fishing.Running = true
@@ -93,6 +107,7 @@ function fishing.Start()
     fishing.Cast()
 end
 
+-- Stop fishing
 function fishing.Stop()
     fishing.Running = false
     fishing.WaitingHook = false
