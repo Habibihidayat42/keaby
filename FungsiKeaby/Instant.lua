@@ -1,4 +1,4 @@
--- Instant.lua (Fish It - Predicted Fast Hook Mode)
+-- Instant.lua (Fish It - Adaptive Instant Bite)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer
@@ -20,10 +20,9 @@ local fishing = {
     Settings = {
         FishingDelay = 0.12,
         CancelDelay = 0.05,
-        HookDelay = 0.04, -- lebih cepat
+        HookDelay = 0.06,
         FallbackTimeout = 2.5,
-        Adaptive = true,
-        PredictBite = true, -- aktifkan prediksi tanda seru cepat
+        Adaptive = true, -- aktifkan auto timing
     },
 }
 _G.FishingScript = fishing
@@ -32,32 +31,35 @@ local function log(msg)
     print("[FishIt] " .. msg)
 end
 
--- deteksi rod
+-- ambil nama rod yang sedang dipegang
 local function getRodName()
     local char = localPlayer.Character
     if not char then return "Unknown" end
-    for _, v in ipairs(char:GetChildren()) do
-        if v:IsA("Tool") and v.Name:lower():find("rod") then
-            return v.Name
+    for _, item in ipairs(char:GetChildren()) do
+        if item:IsA("Tool") and item.Name:lower():find("rod") then
+            return item.Name
         end
     end
     return "Unknown"
 end
 
+-- tentukan delay berdasar rod (Fish It timing)
 local function getDelayForRod()
-    local rod = getRodName():lower()
-    if rod:find("ghostfinn") then
+    local name = getRodName():lower()
+    if name:find("ghostfinn") then
         return 0.05
-    elseif rod:find("steampunk") then
-        return 0.22
-    elseif rod:find("sunken") then
+    elseif name:find("steampunk") then
+        return 0.23
+    elseif name:find("sunken") then
         return 0.17
+    elseif name:find("wooden") then
+        return 0.25
     else
-        return 0.15
+        return 0.15 -- default
     end
 end
 
--- event normal (fallback)
+-- listener minigame
 RE_MinigameChanged.OnClientEvent:Connect(function(state)
     if not fishing.Running or not fishing.WaitingHook then return end
     if typeof(state) ~= "string" then return end
@@ -67,7 +69,7 @@ RE_MinigameChanged.OnClientEvent:Connect(function(state)
         task.spawn(function()
             task.wait(fishing.Settings.HookDelay)
             pcall(function() RE_FishingCompleted:FireServer() end)
-            log("⚡ Hook → FishingCompleted fired (server event)")
+            log("⚡ Hook → FishingCompleted fired (Fish It sync)")
             task.wait(fishing.Settings.CancelDelay)
             pcall(function() RF_CancelFishingInputs:InvokeServer() end)
             task.wait(fishing.Settings.FishingDelay)
@@ -81,7 +83,7 @@ RE_FishCaught.OnClientEvent:Connect(function(name, data)
     fishing.WaitingHook = false
     fishing.TotalFish += 1
     local weight = data and data.Weight or 0
-    log(("🐟 %s (%.2f kg)"):format(tostring(name or "Fish"), weight))
+    log(("🐟 Caught: %s (%.2f kg)"):format(tostring(name or "Fish"), weight))
     task.spawn(function()
         task.wait(fishing.Settings.CancelDelay)
         pcall(function() RF_CancelFishingInputs:InvokeServer() end)
@@ -90,56 +92,45 @@ RE_FishCaught.OnClientEvent:Connect(function(name, data)
     end)
 end)
 
--- casting utama
 function fishing.Cast()
     if not fishing.Running or fishing.WaitingHook then return end
     fishing.WaitingHook = true
 
     local delay = fishing.Settings.Adaptive and getDelayForRod() or 0.1
-    log(("🎣 Casting (%s | delay=%.2fs)"):format(getRodName(), delay))
+    log(("🎣 Casting (rod=%s | delay=%.2fs)"):format(getRodName(), delay))
 
     task.spawn(function()
+        -- cancel input lama (jaga sync)
         pcall(function() RF_CancelFishingInputs:InvokeServer() end)
+
+        -- mulai charge rod
         pcall(function() RF_ChargeFishingRod:InvokeServer({[4] = tick()}) end)
         task.wait(delay)
+
+        -- request minigame
         pcall(function() RF_RequestMinigame:InvokeServer(1.95, 0.5, tick()) end)
-        log("🎯 RequestMinigame sent")
+        log("🎯 Cast sent (Charge → Request)")
 
-        -- ⚡ Prediksi tanda seru cepat
-        if fishing.Settings.PredictBite then
-            task.delay(delay + 0.05, function()
-                if fishing.Running and fishing.WaitingHook then
-                    log("❗ Predicted bite! (early FishingCompleted)")
-                    fishing.WaitingHook = false
-                    pcall(function() RE_FishingCompleted:FireServer() end)
-                    task.wait(fishing.Settings.CancelDelay)
-                    pcall(function() RF_CancelFishingInputs:InvokeServer() end)
-                    task.wait(fishing.Settings.FishingDelay)
-                    if fishing.Running then fishing.Cast() end
-                end
-            end)
-        end
+        -- ⚡ langsung kirim FishingCompleted lebih cepat (skip tunggu “!”)
+        task.wait(0.08) -- bisa ubah 0.05–0.1 tergantung rod
+        pcall(function() RE_FishingCompleted:FireServer() end)
+        log("⚡ Forced early bite (instant !)")
 
-        -- fallback safety
-        task.delay(fishing.Settings.FallbackTimeout, function()
-            if fishing.Running and fishing.WaitingHook then
-                fishing.WaitingHook = false
-                log("⏱️ Timeout - forcing FishingCompleted")
-                pcall(function() RE_FishingCompleted:FireServer() end)
-                task.wait(fishing.Settings.CancelDelay)
-                pcall(function() RF_CancelFishingInputs:InvokeServer() end)
-                task.wait(fishing.Settings.FishingDelay)
-                if fishing.Running then fishing.Cast() end
-            end
-        end)
+        -- lanjut cancel + delay untuk cast berikutnya
+        task.wait(fishing.Settings.CancelDelay)
+        pcall(function() RF_CancelFishingInputs:InvokeServer() end)
+        task.wait(fishing.Settings.FishingDelay)
+        fishing.WaitingHook = false
+        if fishing.Running then fishing.Cast() end
     end)
 end
+
 
 function fishing.Start()
     if fishing.Running then return end
     fishing.Running = true
     fishing.TotalFish = 0
-    log("🚀 Fast Hook Prediction Mode (Fish It)")
+    log("🚀 Adaptive Instant Fishing Started (Fish It)")
     fishing.Cast()
 end
 
