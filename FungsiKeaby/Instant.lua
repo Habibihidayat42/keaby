@@ -1,8 +1,8 @@
 -- Instant.lua (no toggle key) - INSTANT BITE FISHING
+
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer
-
 local netFolder = ReplicatedStorage:WaitForChild("Packages"):WaitForChild("_Index")
     :WaitForChild("sleitnick_net@0.2.0"):WaitForChild("net")
 
@@ -18,13 +18,14 @@ local fishing = {
     WaitingHook = false,
     TotalFish = 0,
     Settings = {
-        FishingDelay = 0.12,
-        CancelDelay = 0.05,
-        HookDelay = 0.06,
-        ChargeToRequestDelay = 0.05,
-        FallbackTimeout = 1.5,
+        FishingDelay = 0.05, -- Diperkecil untuk meningkatkan kecepatan
+        CancelDelay = 0.03, -- Diperkecil untuk meningkatkan kecepatan
+        HookDelay = 0.04, -- Diperkecil untuk meningkatkan kecepatan
+        ChargeToRequestDelay = 0.03, -- Diperkecil untuk meningkatkan kecepatan
+        FallbackTimeout = 1.2, -- Dikurangi untuk mempercepat timeout
     },
 }
+
 _G.FishingScript = fishing
 
 local function log(msg)
@@ -44,7 +45,9 @@ RE_MinigameChanged.OnClientEvent:Connect(function(state)
             task.wait(fishing.Settings.CancelDelay)
             pcall(function() RF_CancelFishingInputs:InvokeServer() end)
             task.wait(fishing.Settings.FishingDelay)
-            if fishing.Running then fishing.Cast() end
+            if fishing.Running then 
+                fishing.Cast() 
+            end
         end)
     end
 end)
@@ -59,7 +62,9 @@ RE_FishCaught.OnClientEvent:Connect(function(name, data)
         task.wait(fishing.Settings.CancelDelay)
         pcall(function() RF_CancelFishingInputs:InvokeServer() end)
         task.wait(fishing.Settings.FishingDelay)
-        if fishing.Running then fishing.Cast() end
+        if fishing.Running then 
+            fishing.Cast() 
+        end
     end)
 end)
 
@@ -70,7 +75,7 @@ function fishing.Cast()
         pcall(function() RF_CancelFishingInputs:InvokeServer() end)
         pcall(function() RF_ChargeFishingRod:InvokeServer({[4] = tick()}) end)
         task.wait(fishing.Settings.ChargeToRequestDelay)
-        pcall(function() RF_RequestMinigame:InvokeServer(1.95, 0.5, tick()) end)
+        pcall(function() RF_RequestMinigame:InvokeServer(1.9, 0.4, tick()) end) -- Penyesuaian nilai
         task.delay(fishing.Settings.FallbackTimeout, function()
             if fishing.Running and fishing.WaitingHook then
                 fishing.WaitingHook = false
@@ -78,7 +83,9 @@ function fishing.Cast()
                 task.wait(fishing.Settings.CancelDelay)
                 pcall(function() RF_CancelFishingInputs:InvokeServer() end)
                 task.wait(fishing.Settings.FishingDelay)
-                if fishing.Running then fishing.Cast() end
+                if fishing.Running then 
+                    fishing.Cast() 
+                end
             end
         end)
     end)
