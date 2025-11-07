@@ -75,7 +75,7 @@ function fishing.Cast()
     log("🎣 Cast #" .. fishing.CurrentCycle)
     
     -- Gunakan parameter yang sama dengan script original Anda
-    RF_ChargeFishingRod:InvokeServer({[22] = tick()})
+    RF_ChargeFishingRod:InvokeServer({[4] = tick()})
     task.wait(fishing.Settings.CastDelay)
     
     RF_RequestMinigame:InvokeServer(9, 0, tick())
