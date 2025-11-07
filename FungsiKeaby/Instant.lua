@@ -20,7 +20,7 @@ local fishing = {
     Settings = {
         FishingDelay = 0.12,
         CancelDelay = 0.05,
-        HookDelay = 0.06,
+        HookDelay = 0.03,
         ChargeToRequestDelay = 0.05,
         FallbackTimeout = 1.5,
     },
