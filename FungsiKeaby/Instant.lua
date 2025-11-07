@@ -71,11 +71,9 @@ function fishing.Cast()
         pcall(function() RF_ChargeFishingRod:InvokeServer({[4] = tick()}) end)
         task.wait(fishing.Settings.ChargeToRequestDelay)
         pcall(function() RF_RequestMinigame:InvokeServer(1.95, 0.5, tick()) end)
-        log("🎯 Cast sent (Charge -> Request)")
         task.delay(fishing.Settings.FallbackTimeout, function()
             if fishing.Running and fishing.WaitingHook then
                 fishing.WaitingHook = false
-                log("⏱️ Fallback timeout — forcing complete")
                 pcall(function() RE_FishingCompleted:FireServer() end)
                 task.wait(fishing.Settings.CancelDelay)
                 pcall(function() RF_CancelFishingInputs:InvokeServer() end)
