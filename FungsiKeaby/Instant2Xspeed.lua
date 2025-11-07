@@ -31,14 +31,22 @@ local function log(msg)
     print("[Fishing] " .. msg)
 end
 
--- Utility retry untuk invoke server
-local function SafeInvoke(RF, ...)
-    local success, result = pcall(RF.InvokeServer, RF, ...)
-    if not success then
-        task.wait(fishing.Settings.RetryDelay)
-        pcall(RF.InvokeServer, RF, ...)
+-- Utility: SafeInvoke untuk RemoteFunction / RemoteEvent
+local function SafeInvoke(remote, ...)
+    if remote:IsA("RemoteFunction") then
+        local success, result = pcall(remote.InvokeServer, remote, ...)
+        if not success then
+            task.wait(fishing.Settings.RetryDelay)
+            pcall(remote.InvokeServer, remote, ...)
+        end
+        return result
+    elseif remote:IsA("RemoteEvent") then
+        local success = pcall(remote.FireServer, remote, ...)
+        if not success then
+            task.wait(fishing.Settings.RetryDelay)
+            pcall(remote.FireServer, remote, ...)
+        end
     end
-    return result
 end
 
 -- Event: Minigame hook terdeteksi
