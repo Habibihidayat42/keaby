@@ -153,7 +153,7 @@ local logoText = new("TextLabel",{
 -- Title
 local titleLabel = new("TextLabel",{
     Parent=topBar,
-    Text="KEABY ULTRA",
+    Text="Keabyy",
     Size=UDim2.new(0,200,1,0),
     Position=UDim2.new(0,65,0,0),
     Font=Enum.Font.GothamBold,
