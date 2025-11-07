@@ -21,6 +21,8 @@ local fishing = {
     Settings = {
         FishingDelay = 0.3,
         CancelDelay = 0.05,
+        CastDelay = 0.5, -- Delay antara lempar dan tarik
+        PullDelay = 0.3, -- Delay setelah menarik
     },
 }
 _G.FishingScript = fishing
@@ -32,13 +34,7 @@ end
 RE_MinigameChanged.OnClientEvent:Connect(function(state)
     if fishing.WaitingHook and typeof(state) == "string" and string.find(string.lower(state), "hook") then
         fishing.WaitingHook = false
-        task.wait(0.30)
-        RE_FishingCompleted:FireServer()
         log("✅ Hook terdeteksi — ikan ditarik.")
-        task.wait(fishing.Settings.CancelDelay)
-        pcall(function() RF_CancelFishingInputs:InvokeServer() end)
-        task.wait(fishing.Settings.FishingDelay)
-        if fishing.Running then fishing.Cast() end
     end
 end)
 
@@ -47,34 +43,38 @@ RE_FishCaught.OnClientEvent:Connect(function(name, data)
         fishing.WaitingHook = false
         fishing.TotalFish = fishing.TotalFish + 1
         log("🐟 Ikan tertangkap: " .. tostring(name))
-        task.wait(fishing.Settings.CancelDelay)
-        pcall(function() RF_CancelFishingInputs:InvokeServer() end)
-        task.wait(fishing.Settings.FishingDelay)
-        if fishing.Running then fishing.Cast() end
     end
 end)
 
 function fishing.Cast()
-    if not fishing.Running or fishing.WaitingHook then return end
+    if not fishing.Running then return end
+    
     fishing.CurrentCycle = fishing.CurrentCycle + 1
+    
     pcall(function()
+        -- Lempar kail
         RF_ChargeFishingRod:InvokeServer({[22] = tick()})
         log("⚡ Lempar pancing.")
-        task.wait(0.07)
-        RF_RequestMinigame:InvokeServer(9, 0, tick())
-        log("🎯 Menunggu hook...")
-        fishing.WaitingHook = true
-        task.delay(1.1, function()
-            if fishing.WaitingHook and fishing.Running then
-                fishing.WaitingHook = false
-                RE_FishingCompleted:FireServer()
-                log("⚠️ Timeout pendek — fallback tarik cepat.")
-                task.wait(fishing.Settings.CancelDelay)
-                pcall(function() RF_CancelFishingInputs:InvokeServer() end)
-                task.wait(fishing.Settings.FishingDelay)
-                if fishing.Running then fishing.Cast() end
-            end
+        
+        task.wait(fishing.Settings.CastDelay)
+        
+        -- Tarik kail tanpa menunggu hook
+        RE_FishingCompleted:FireServer()
+        log("🎯 Tarik kail otomatis.")
+        
+        task.wait(fishing.Settings.PullDelay)
+        
+        -- Reset dan siapkan untuk lempar berikutnya
+        pcall(function() 
+            RF_CancelFishingInputs:InvokeServer() 
         end)
+        
+        task.wait(fishing.Settings.FishingDelay)
+        
+        -- Lanjut ke cycle berikutnya
+        if fishing.Running then 
+            fishing.Cast() 
+        end
     end)
 end
 
@@ -83,7 +83,7 @@ function fishing.Start()
     fishing.Running = true
     fishing.CurrentCycle = 0
     fishing.TotalFish = 0
-    log("🚀 FISHING STARTED!")
+    log("🚀 FISHING STARTED! (Mode Instant)")
     fishing.Cast()
 end
 
