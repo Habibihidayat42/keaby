@@ -31,23 +31,27 @@ local function log(msg)
     print("[Fishing] " .. msg)
 end
 
--- Utility: SafeInvoke untuk RemoteFunction / RemoteEvent
 local function SafeInvoke(remote, ...)
     if remote:IsA("RemoteFunction") then
-        local success, result = pcall(remote.InvokeServer, remote, ...)
+        local success, result = pcall(function()
+            return remote:InvokeServer(...)
+        end)
         if not success then
             task.wait(fishing.Settings.RetryDelay)
-            pcall(remote.InvokeServer, remote, ...)
+            pcall(function() remote:InvokeServer(...) end)
         end
         return result
     elseif remote:IsA("RemoteEvent") then
-        local success = pcall(remote.FireServer, remote, ...)
+        local success = pcall(function()
+            remote:FireServer(...)
+        end)
         if not success then
             task.wait(fishing.Settings.RetryDelay)
-            pcall(remote.FireServer, remote, ...)
+            pcall(function() remote:FireServer(...) end)
         end
     end
 end
+
 
 -- Event: Minigame hook terdeteksi
 RE_MinigameChanged.OnClientEvent:Connect(function(state)
