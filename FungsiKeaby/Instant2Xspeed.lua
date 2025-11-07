@@ -1,11 +1,11 @@
--- FixedUltraSpeed.lua - OPTIMIZED VERSION OF YOUR SCRIPT
+-- AdaptiveUltraFishing.lua - SMART FISHING FOR ALL LOCATIONS
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer
 
-print("=== 🚀 FIXED ULTRA SPEED LOADED ===")
+print("=== 🧠 ADAPTIVE FISHING LOADED ===")
 
--- Network remotes dengan path yang benar
+-- Network remotes
 local netFolder = ReplicatedStorage:WaitForChild("Packages"):WaitForChild("_Index")
     :WaitForChild("sleitnick_net@0.2.0"):WaitForChild("net")
 
@@ -21,33 +21,74 @@ local fishing = {
     WaitingHook = false,
     CurrentCycle = 0,
     TotalFish = 0,
-    
-    -- **OPTIMIZED TIMING** - Lebih cepat dari script original
-    Settings = {
-        FishingDelay = 0.15,      -- Dipercepat dari 0.3
-        CancelDelay = 0.02,       -- Dipercepat dari 0.05
-        HookDelay = 0.25,         -- Dipercepat dari 0.30
-        Timeout = 1.1,           -- Dipercepat dari 1.1
-        CastDelay = 0.05,         -- Dipercepat dari 0.07
-    }
+    CurrentLocation = "Unknown"
 }
 
-_G.UltraFishing = fishing
+_G.AdaptiveFishing = fishing
 
 local function log(msg)
-    print("[⚡ULTRA] " .. msg)
+    print("[🧠ADAPT] " .. msg)
 end
 
--- **OPTIMIZED EVENT HANDLERS**
+-- **DETECT LOCATION FUNCTION**
+local function GetCurrentLocation()
+    local character = localPlayer.Character
+    if not character then return "Unknown" end
+    
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    if not humanoidRootPart then return "Unknown" end
+    
+    local position = humanoidRootPart.Position
+    
+    -- Detect berdasarkan position
+    if position.Y < -100 then
+        return "DeepSea"  -- Deep water areas
+    elseif position.X > 1000 then
+        return "AncientJungle"
+    elseif position.Z > 1500 then
+        return "LostIsle" 
+    elseif position.Y > 50 then
+        return "Mountain"
+    else
+        return "Shallow"  -- Default/shallow water
+    end
+end
+
+-- **ADAPTIVE PARAMETERS BASED ON LOCATION**
+local function GetFishingParameters()
+    local location = GetCurrentLocation()
+    fishing.CurrentLocation = location
+    
+    local parameters = {
+        -- Format: {chargePower, chargeTime, timeout}
+        Shallow = {9, 0, 0.8},           -- Normal areas
+        DeepSea = {15, 2.0, 1.2},        -- Deep water, butuh power lebih
+        AncientJungle = {22, 1.95, 1.5}, -- Heavy fish area
+        LostIsle = {25, 2.2, 1.8},       -- Very heavy fish
+        Mountain = {12, 1.5, 1.0}        -- Medium difficulty
+    }
+    
+    return parameters[location] or parameters["Shallow"]
+end
+
+-- **SMART EVENT HANDLERS**
 RE_MinigameChanged.OnClientEvent:Connect(function(state)
     if fishing.WaitingHook and typeof(state) == "string" and string.find(string.lower(state), "hook") then
         fishing.WaitingHook = false
-        task.wait(fishing.Settings.HookDelay)  -- Lebih cepat
+        
+        -- Adaptive delay based on location
+        local location = fishing.CurrentLocation
+        local hookDelay = 0.25
+        if location == "AncientJungle" or location == "LostIsle" then
+            hookDelay = 0.35  -- Butuh waktu lebih untuk fish berat
+        end
+        
+        task.wait(hookDelay)
         RE_FishingCompleted:FireServer()
-        log("✅ HOOK DETECTED - Instant pull")
-        task.wait(fishing.Settings.CancelDelay)
+        log("✅ HOOK @ " .. location .. " - Power pull")
+        task.wait(0.02)
         RF_CancelFishingInputs:InvokeServer()
-        task.wait(fishing.Settings.FishingDelay)
+        task.wait(0.15)
         if fishing.Running then fishing.Cast() end
     end
 end)
@@ -57,39 +98,47 @@ RE_FishCaught.OnClientEvent:Connect(function(name, data)
         fishing.WaitingHook = false
         fishing.TotalFish = fishing.TotalFish + 1
         local weight = data and data.Weight or 0
-        log("🐟 CAUGHT: " .. tostring(name) .. " (" .. string.format("%.2f", weight) .. " kg)")
-        task.wait(fishing.Settings.CancelDelay)
+        log("🐟 CAUGHT: " .. tostring(name) .. " (" .. string.format("%.2f", weight) .. " kg) @ " .. fishing.CurrentLocation)
+        task.wait(0.02)
         RF_CancelFishingInputs:InvokeServer()
-        task.wait(fishing.Settings.FishingDelay)
+        task.wait(0.15)
         if fishing.Running then fishing.Cast() end
     end
 end)
 
--- **OPTIMIZED CASTING FUNCTION**
+-- **ADAPTIVE CASTING FUNCTION**
 function fishing.Cast()
     if not fishing.Running or fishing.WaitingHook then return end
     
     fishing.CurrentCycle = fishing.CurrentCycle + 1
+    
+    -- Get adaptive parameters
+    local chargePower, chargeTime, timeout = unpack(GetFishingParameters())
+    
+    log("🎣 Cast #" .. fishing.CurrentCycle .. " @ " .. fishing.CurrentLocation .. " [Power:" .. chargePower .. "]")
+    
     fishing.WaitingHook = true
     
-    log("🎣 Cast #" .. fishing.CurrentCycle)
+    -- Reset previous
+    RF_CancelFishingInputs:InvokeServer()
+    task.wait(0.05)
     
-    -- Gunakan parameter yang sama dengan script original Anda
-    RF_ChargeFishingRod:InvokeServer({[4] = tick()})
-    task.wait(fishing.Settings.CastDelay)
+    -- Charge dengan power sesuai lokasi
+    RF_ChargeFishingRod:InvokeServer({[22] = tick()})
+    task.wait(0.05)
     
-    RF_RequestMinigame:InvokeServer(9, 0, tick())
-    log("⚡ Minigame requested")
+    -- Request minigame dengan parameter adaptive
+    RF_RequestMinigame:InvokeServer(chargeTime, chargePower, tick())
     
-    -- **FASTER TIMEOUT**
-    task.delay(fishing.Settings.Timeout, function()
+    -- Adaptive timeout
+    task.delay(timeout, function()
         if fishing.WaitingHook and fishing.Running then
             fishing.WaitingHook = false
             RE_FishingCompleted:FireServer()
-            log("⏱️ FAST TIMEOUT - forcing catch")
-            task.wait(fishing.Settings.CancelDelay)
+            log("⏱️ TIMEOUT @ " .. fishing.CurrentLocation .. " - Retrying...")
+            task.wait(0.02)
             RF_CancelFishingInputs:InvokeServer()
-            task.wait(fishing.Settings.FishingDelay)
+            task.wait(0.15)
             if fishing.Running then fishing.Cast() end
         end
     end)
@@ -101,8 +150,12 @@ function fishing.Start()
     fishing.CurrentCycle = 0
     fishing.TotalFish = 0
     fishing.WaitingHook = false
-    log("🚀 ULTRA SPEED FISHING STARTED!")
-    log("⚡ Optimized timing: " .. fishing.Settings.HookDelay .. "s hook, " .. fishing.Settings.FishingDelay .. "s cast")
+    
+    -- Detect location pertama kali
+    fishing.CurrentLocation = GetCurrentLocation()
+    
+    log("🚀 ADAPTIVE FISHING STARTED!")
+    log("📍 Location: " .. fishing.CurrentLocation)
     fishing.Cast()
 end
 
@@ -112,21 +165,14 @@ function fishing.Stop()
     log("🛑 FISHING STOPPED - Total: " .. fishing.TotalFish .. " fish")
 end
 
--- Performance monitoring
-function fishing.SetTurboMode()
-    fishing.Settings = {
-        FishingDelay = 0.1,   -- Super fast
-        CancelDelay = 0.01,   -- Instant
-        HookDelay = 0.15,     -- Very fast
-        Timeout = 0.7,       -- Short timeout
-        CastDelay = 0.03,     -- Quick cast
-    }
-    log("💨 TURBO MODE ACTIVATED!")
+-- Manual location override
+function fishing.SetLocation(location)
+    fishing.CurrentLocation = location
+    log("📍 Manual location set: " .. location)
 end
 
--- Auto start dengan turbo mode
+-- Auto start
 task.delay(2, function()
-    fishing.SetTurboMode()
     fishing.Start()
 end)
 
