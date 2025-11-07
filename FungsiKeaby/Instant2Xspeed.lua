@@ -18,7 +18,7 @@ local fishing = {
     TotalFish = 0,
     Settings = {
         FishingDelay = 0.25,   -- jeda antar lempar
-        PullDelay = 0.10,      -- jeda setelah lempar sebelum tarik
+        PullDelay = 1,      -- jeda setelah lempar sebelum tarik
         CancelDelay = 0.05,    -- jeda sebelum cancel
     },
 }
