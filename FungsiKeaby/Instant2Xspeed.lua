@@ -27,7 +27,7 @@ local fishing = {
         FishingDelay = 0.15,      -- Dipercepat dari 0.3
         CancelDelay = 0.02,       -- Dipercepat dari 0.05
         HookDelay = 0.25,         -- Dipercepat dari 0.30
-        Timeout = 0.9,           -- Dipercepat dari 1.1
+        Timeout = 1.1,           -- Dipercepat dari 1.1
         CastDelay = 0.05,         -- Dipercepat dari 0.07
     }
 }
