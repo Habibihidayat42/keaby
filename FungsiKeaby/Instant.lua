@@ -1,4 +1,4 @@
--- Instant.lua (no toggle key) - INSTANT BITE FISHING
+-- Instant.lua (Fish It - Adaptive Instant Bite)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer
@@ -21,16 +21,45 @@ local fishing = {
         FishingDelay = 0.12,
         CancelDelay = 0.05,
         HookDelay = 0.06,
-        ChargeToRequestDelay = 0.05,
-        FallbackTimeout = 1.5,
+        FallbackTimeout = 2.5,
+        Adaptive = true, -- aktifkan auto timing
     },
 }
 _G.FishingScript = fishing
 
 local function log(msg)
-    print("[Fishing] " .. msg)
+    print("[FishIt] " .. msg)
 end
 
+-- ambil nama rod yang sedang dipegang
+local function getRodName()
+    local char = localPlayer.Character
+    if not char then return "Unknown" end
+    for _, item in ipairs(char:GetChildren()) do
+        if item:IsA("Tool") and item.Name:lower():find("rod") then
+            return item.Name
+        end
+    end
+    return "Unknown"
+end
+
+-- tentukan delay berdasar rod (Fish It timing)
+local function getDelayForRod()
+    local name = getRodName():lower()
+    if name:find("ghostfinn") then
+        return 0.05
+    elseif name:find("steampunk") then
+        return 0.23
+    elseif name:find("sunken") then
+        return 0.17
+    elseif name:find("wooden") then
+        return 0.25
+    else
+        return 0.15 -- default
+    end
+end
+
+-- listener minigame
 RE_MinigameChanged.OnClientEvent:Connect(function(state)
     if not fishing.Running or not fishing.WaitingHook then return end
     if typeof(state) ~= "string" then return end
@@ -40,7 +69,7 @@ RE_MinigameChanged.OnClientEvent:Connect(function(state)
         task.spawn(function()
             task.wait(fishing.Settings.HookDelay)
             pcall(function() RE_FishingCompleted:FireServer() end)
-            log("⚡ Hook -> FishingCompleted fired (synced)")
+            log("⚡ Hook → FishingCompleted fired (Fish It sync)")
             task.wait(fishing.Settings.CancelDelay)
             pcall(function() RF_CancelFishingInputs:InvokeServer() end)
             task.wait(fishing.Settings.FishingDelay)
@@ -52,9 +81,9 @@ end)
 RE_FishCaught.OnClientEvent:Connect(function(name, data)
     if not fishing.Running then return end
     fishing.WaitingHook = false
-    fishing.TotalFish = fishing.TotalFish + 1
+    fishing.TotalFish += 1
     local weight = data and data.Weight or 0
-    log(("🐟 Fish caught: %s (%.2f kg)"):format(tostring(name or "Fish"), weight))
+    log(("🐟 Caught: %s (%.2f kg)"):format(tostring(name or "Fish"), weight))
     task.spawn(function()
         task.wait(fishing.Settings.CancelDelay)
         pcall(function() RF_CancelFishingInputs:InvokeServer() end)
@@ -66,16 +95,21 @@ end)
 function fishing.Cast()
     if not fishing.Running or fishing.WaitingHook then return end
     fishing.WaitingHook = true
+
+    local delay = fishing.Settings.Adaptive and getDelayForRod() or 0.1
+    log(("🎣 Casting (rod=%s | delay=%.2fs)"):format(getRodName(), delay))
+
     task.spawn(function()
         pcall(function() RF_CancelFishingInputs:InvokeServer() end)
         pcall(function() RF_ChargeFishingRod:InvokeServer({[4] = tick()}) end)
-        task.wait(fishing.Settings.ChargeToRequestDelay)
+        task.wait(delay)
         pcall(function() RF_RequestMinigame:InvokeServer(1.95, 0.5, tick()) end)
-        log("🎯 Cast sent (Charge -> Request)")
+        log("🎯 RequestMinigame sent")
+
         task.delay(fishing.Settings.FallbackTimeout, function()
             if fishing.Running and fishing.WaitingHook then
                 fishing.WaitingHook = false
-                log("⏱️ Fallback timeout — forcing complete")
+                log("⏱️ Timeout - forcing FishingCompleted")
                 pcall(function() RE_FishingCompleted:FireServer() end)
                 task.wait(fishing.Settings.CancelDelay)
                 pcall(function() RF_CancelFishingInputs:InvokeServer() end)
@@ -90,14 +124,14 @@ function fishing.Start()
     if fishing.Running then return end
     fishing.Running = true
     fishing.TotalFish = 0
-    log("🚀 Normal Sync mode started")
+    log("🚀 Adaptive Instant Fishing Started (Fish It)")
     fishing.Cast()
 end
 
 function fishing.Stop()
     fishing.Running = false
     fishing.WaitingHook = false
-    log("🛑 Stopped")
+    log("🛑 Fishing stopped")
 end
 
 return fishing
