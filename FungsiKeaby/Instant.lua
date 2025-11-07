@@ -20,8 +20,8 @@ local fishing = {
     Settings = {
         FishingDelay = 0.12,
         CancelDelay = 0.05,
-        HookDelay = 0.06,
-        FallbackTimeout = 2.5,
+        HookDelay = 0.01,
+        FallbackTimeout = 1.5,
         Adaptive = true, -- aktifkan auto timing
     },
 }
@@ -96,61 +96,29 @@ function fishing.Cast()
     if not fishing.Running or fishing.WaitingHook then return end
     fishing.WaitingHook = true
 
-    local rodName = getRodName()
-    local delay = getDelayForRod()
-
-    log(("🎣 Casting (rod=%s | delay=%.2fs)"):format(rodName, delay))
+    local delay = fishing.Settings.Adaptive and getDelayForRod() or 0.1
+    log(("🎣 Casting (rod=%s | delay=%.2fs)"):format(getRodName(), delay))
 
     task.spawn(function()
         pcall(function() RF_CancelFishingInputs:InvokeServer() end)
         pcall(function() RF_ChargeFishingRod:InvokeServer({[4] = tick()}) end)
         task.wait(delay)
         pcall(function() RF_RequestMinigame:InvokeServer(1.95, 0.5, tick()) end)
-        log("🎯 Cast sent (Charge → Request)")
+        log("🎯 RequestMinigame sent")
 
-        -- ⚡ Cepatkan tanda seru muncul (client-side visual)
-        task.delay(0.05, function()
-            local char = localPlayer.Character
-            if char and char:FindFirstChild("Head") then
-                local ex = Instance.new("BillboardGui")
-                ex.Name = "QuickExclamation"
-                ex.Size = UDim2.new(0, 50, 0, 50)
-                ex.StudsOffset = Vector3.new(0, 2.5, 0)
-                ex.AlwaysOnTop = true
-                ex.Adornee = char.Head
-
-                local label = Instance.new("TextLabel")
-                label.Parent = ex
-                label.Size = UDim2.new(1, 0, 1, 0)
-                label.BackgroundTransparency = 1
-                label.Text = "!"
-                label.TextColor3 = Color3.fromRGB(255, 255, 100)
-                label.TextScaled = true
-                label.Font = Enum.Font.GothamBold
-                ex.Parent = char.Head
-
-                task.delay(0.25, function()
-                    if ex then ex:Destroy() end
-                end)
+        task.delay(fishing.Settings.FallbackTimeout, function()
+            if fishing.Running and fishing.WaitingHook then
+                fishing.WaitingHook = false
+                log("⏱️ Timeout - forcing FishingCompleted")
+                pcall(function() RE_FishingCompleted:FireServer() end)
+                task.wait(fishing.Settings.CancelDelay)
+                pcall(function() RF_CancelFishingInputs:InvokeServer() end)
+                task.wait(fishing.Settings.FishingDelay)
+                if fishing.Running then fishing.Cast() end
             end
         end)
-
-        -- ⚙️ Fast-sync: tunggu pendek (tapi beri server waktu memulai minigame)
-        local hookWait = math.clamp(delay * 1.2, 0.1, 0.25)
-        task.wait(hookWait)
-
-        -- Setelah “bite” seharusnya mulai → langsung kirim FishingCompleted
-        pcall(function() RE_FishingCompleted:FireServer() end)
-        log(("⚡ Fast-sync bite complete (%.2fs delay)"):format(hookWait))
-
-        task.wait(fishing.Settings.CancelDelay)
-        pcall(function() RF_CancelFishingInputs:InvokeServer() end)
-        task.wait(fishing.Settings.FishingDelay)
-        fishing.WaitingHook = false
-        if fishing.Running then fishing.Cast() end
     end)
 end
-
 
 function fishing.Start()
     if fishing.Running then return end
