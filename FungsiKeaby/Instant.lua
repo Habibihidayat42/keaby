@@ -201,8 +201,4 @@ function fishing.Stop()
     fishing.WaitingHook = false
     log("🛑 AUTO FISHING STOPPED")
 end
-
--- Jalankan otomatis saat script dijalankan
-fishing.Start()
-
 return fishing
