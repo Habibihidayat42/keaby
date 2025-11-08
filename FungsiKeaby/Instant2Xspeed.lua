@@ -1,4 +1,4 @@
--- FixedUltraSpeed.lua - OPTIMIZED VERSION OF YOUR SCRIPT
+-- ⚡ FIXED ULTRA SPEED AUTO FISHING (Manual Start - For External GUI)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer
@@ -15,17 +15,20 @@ local RF_CancelFishingInputs = netFolder:WaitForChild("RF/CancelFishingInputs")
 local RE_FishingCompleted = netFolder:WaitForChild("RE/FishingCompleted")
 local RE_MinigameChanged = netFolder:WaitForChild("RE/FishingMinigameChanged")
 
-
+-- =================================================================
+-- Core Fishing Logic
+-- =================================================================
 local fishing = {
     Running = false,
     WaitingHook = false,
     CurrentCycle = 0,
     TotalFish = 0,
-    
-    -- **OPTIMIZED TIMING** - Lebih cepat dari script original
     Settings = {
-        FishingDelay = 0.15,      -- Dipercepat dari 0.3
-        CancelDelay = 0.02,       -- Dipercepat dari 0.05
+        FishingDelay = 0.15,
+        CancelDelay = 0.02,
+        HookDelay = 0.2,
+        Timeout = 0.8,
+        CastDelay = 0.05,
     }
 }
 
@@ -35,37 +38,36 @@ local function log(msg)
     print("[⚡ULTRA] " .. msg)
 end
 
--- **OPTIMIZED EVENT HANDLERS**
+-- Handle minigame event (detect hook)
 RE_MinigameChanged.OnClientEvent:Connect(function(state)
-    if fishing.WaitingHook and typeof(state) == "string" and string.find(string.lower(state), "hook") then
+    if fishing.Running and fishing.WaitingHook and typeof(state) == "string" and string.find(string.lower(state), "hook") then
         fishing.WaitingHook = false
-        task.wait(fishing.Settings.HookDelay)  -- Lebih cepat
+        task.wait(fishing.Settings.HookDelay)
         RE_FishingCompleted:FireServer()
         log("✅ HOOK DETECTED - Instant pull")
         task.wait(fishing.Settings.CancelDelay)
         RF_CancelFishingInputs:InvokeServer()
         task.wait(fishing.Settings.FishingDelay)
-        if fishing.Running then fishing.Cast() end
+        if fishing.Running then
+            fishing.Cast()
+        end
     end
 end)
 
--- **OPTIMIZED CASTING FUNCTION**
+-- Core cast logic
 function fishing.Cast()
     if not fishing.Running or fishing.WaitingHook then return end
     
-    fishing.CurrentCycle = fishing.CurrentCycle + 1
+    fishing.CurrentCycle += 1
     fishing.WaitingHook = true
-    
     log("🎣 Cast #" .. fishing.CurrentCycle)
     
-    -- Gunakan parameter yang sama dengan script original Anda
     RF_ChargeFishingRod:InvokeServer({[1] = tick()})
     task.wait(fishing.Settings.CastDelay)
-    
     RF_RequestMinigame:InvokeServer(9, 0, tick())
     log("⚡ Minigame requested")
     
-    -- **FASTER TIMEOUT**
+    -- Fast timeout safety
     task.delay(fishing.Settings.Timeout, function()
         if fishing.WaitingHook and fishing.Running then
             fishing.WaitingHook = false
@@ -74,7 +76,9 @@ function fishing.Cast()
             task.wait(fishing.Settings.CancelDelay)
             RF_CancelFishingInputs:InvokeServer()
             task.wait(fishing.Settings.FishingDelay)
-            if fishing.Running then fishing.Cast() end
+            if fishing.Running then
+                fishing.Cast()
+            end
         end
     end)
 end
@@ -86,7 +90,6 @@ function fishing.Start()
     fishing.TotalFish = 0
     fishing.WaitingHook = false
     log("🚀 ULTRA SPEED FISHING STARTED!")
-    log("⚡ Optimized timing: " .. fishing.Settings.HookDelay .. "s hook, " .. fishing.Settings.FishingDelay .. "s cast")
     fishing.Cast()
 end
 
@@ -96,15 +99,23 @@ function fishing.Stop()
     log("🛑 FISHING STOPPED - Total: " .. fishing.TotalFish .. " fish")
 end
 
--- Performance monitoring
 function fishing.SetTurboMode()
     fishing.Settings = {
-        FishingDelay = 0.1,   -- Super fast
-        CancelDelay = 0.01,   -- Instant
-        HookDelay = 0.15,     -- Very fast
-        Timeout = 0.7,       -- Short timeout
-        CastDelay = 0.03,     -- Quick cast
+        FishingDelay = 0.1,
+        CancelDelay = 0.01,
+        HookDelay = 0.15,
+        Timeout = 0.7,
+        CastDelay = 0.03,
     }
     log("💨 TURBO MODE ACTIVATED!")
 end
+
+-- =================================================================
+-- ✅ Manual Mode Only (No Auto Start)
+-- Call these from your GUI:
+-- _G.UltraFishing.Start()
+-- _G.UltraFishing.Stop()
+-- _G.UltraFishing.SetTurboMode()
+-- =================================================================
+
 return fishing
