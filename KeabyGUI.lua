@@ -588,8 +588,8 @@ end
 -- Main Page Content
 local pnl1=makePanel(mainPage,"⚡ Instant Fishing","")
 makeToggle(pnl1,"Enable Instant Fishing",function(on) if on then instant.Start() else instant.Stop() end end)
-makeSlider(pnl1,"Fishing Delay",0.05,1.0,0.12,function(v) instant.Settings.FishingDelay=v end)
-makeSlider(pnl1,"Cancel Delay",0.01,0.3,0.05,function(v) instant.Settings.CancelDelay=v end)
+makeSlider(pnl1,"Fishing Delay",0.01,5.0,0.12,function(v) instant.Settings.MaxWaitTime=v end)
+makeSlider(pnl1,"Cancel Delay",0.01,1.5,0.19,function(v) instant.Settings.CancelDelay=v end)
 
 local pnl2=makePanel(mainPage,"🚀 Instant 2x Speed","")
 makeToggle(pnl2,"Enable Instant 2x Speed",function(on) if on then instant2x.Start() else instant2x.Stop() end end)
