@@ -1,16 +1,17 @@
--- ⚡ ULTRA SPEED AUTO FISHING v29.1 (Clean Auto-Start, No UI / No Toggle Key)
+-- ⚡ ULTRA SPEED AUTO FISHING v29.1 (No Auto-Start / Controlled by GUI)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer
 local Character = localPlayer.Character or localPlayer.CharacterAdded:Wait()
 local Humanoid = Character:WaitForChild("Humanoid")
 
--- Hentikan script lama
+-- Hentikan script lama jika masih aktif
 if _G.FishingScript then
     _G.FishingScript.Stop()
     task.wait(0.1)
 end
 
+-- Inisialisasi koneksi network
 local netFolder = ReplicatedStorage
     :WaitForChild("Packages")
     :WaitForChild("_Index")
@@ -24,11 +25,13 @@ local RE_FishingCompleted = netFolder:WaitForChild("RE/FishingCompleted")
 local RE_MinigameChanged = netFolder:WaitForChild("RE/FishingMinigameChanged")
 local RE_FishCaught = netFolder:WaitForChild("RE/FishCaught")
 
+-- Modul utama
 local fishing = {
     Running = false,
     WaitingHook = false,
     CurrentCycle = 0,
     TotalFish = 0,
+    Connections = {}, -- simpan koneksi agar bisa di-disconnect
     Settings = {
         FishingDelay = 0.05,
         CancelDelay = 0.19,
@@ -40,11 +43,12 @@ local fishing = {
 
 _G.FishingScript = fishing
 
+-- Logging ringkas
 local function log(msg)
     print(("[Fishing] %s"):format(msg))
 end
 
--- Nonaktifkan animasi pancing
+-- Fungsi disable animasi
 local function disableFishingAnim()
     pcall(function()
         for _, track in pairs(Humanoid:GetPlayingAnimationTracks()) do
@@ -68,68 +72,7 @@ local function disableFishingAnim()
     end)
 end
 
--- Disable animasi secara terus-menerus
-task.spawn(function()
-    while task.wait(0.15) do
-        if fishing.Running then
-            disableFishingAnim()
-        end
-    end
-end)
-
--- Hook detection
-RE_MinigameChanged.OnClientEvent:Connect(function(state)
-    if fishing.WaitingHook and typeof(state) == "string" then
-        local stateLower = string.lower(state)
-        if string.find(stateLower, "hook") or string.find(stateLower, "bite") or string.find(stateLower, "catch") then
-            fishing.WaitingHook = false
-            task.wait(fishing.Settings.HookDetectionDelay)
-
-            pcall(function()
-                RE_FishingCompleted:FireServer()
-                log("✅ Hook terdeteksi — ikan ditarik!")
-            end)
-
-            task.wait(fishing.Settings.CancelDelay)
-            pcall(function()
-                RF_CancelFishingInputs:InvokeServer()
-                log("🔄 Reset fishing inputs")
-            end)
-
-            task.wait(fishing.Settings.FishingDelay)
-            if fishing.Running then
-                fishing.Cast()
-            end
-        end
-    end
-end)
-
--- Handler saat ikan tertangkap
-RE_FishCaught.OnClientEvent:Connect(function(name, data)
-    if fishing.Running then
-        fishing.WaitingHook = false
-        fishing.TotalFish += 1
-        local weight = data and data.Weight or 0
-        log("🐟 Ikan tertangkap: " .. tostring(name) .. " (" .. string.format("%.2f", weight) .. " kg)")
-
-        local success = pcall(function()
-            task.wait(fishing.Settings.CancelDelay)
-            RF_CancelFishingInputs:InvokeServer()
-            log("🔄 Reset setelah tangkapan")
-        end)
-
-        if not success then
-            log("⚠️ Gagal reset, melanjutkan...")
-        end
-
-        task.wait(fishing.Settings.FishingDelay)
-        if fishing.Running then
-            fishing.Cast()
-        end
-    end
-end)
-
--- Fungsi utama lempar pancing
+-- Fungsi utama cast
 function fishing.Cast()
     if not fishing.Running or fishing.WaitingHook then return end
 
@@ -184,21 +127,101 @@ function fishing.Cast()
     end
 end
 
--- Start dan Stop
+-- Start / Stop Functions
 function fishing.Start()
     if fishing.Running then return end
     fishing.Running = true
     fishing.CurrentCycle = 0
     fishing.TotalFish = 0
+
     log("🚀 AUTO FISHING STARTED!")
     disableFishingAnim()
+
+    -- Hubungkan event hanya saat aktif
+    fishing.Connections.Minigame = RE_MinigameChanged.OnClientEvent:Connect(function(state)
+        if fishing.WaitingHook and typeof(state) == "string" then
+            local stateLower = string.lower(state)
+            if string.find(stateLower, "hook") or string.find(stateLower, "bite") or string.find(stateLower, "catch") then
+                fishing.WaitingHook = false
+                task.wait(fishing.Settings.HookDetectionDelay)
+
+                pcall(function()
+                    RE_FishingCompleted:FireServer()
+                    log("✅ Hook terdeteksi — ikan ditarik!")
+                end)
+
+                task.wait(fishing.Settings.CancelDelay)
+                pcall(function()
+                    RF_CancelFishingInputs:InvokeServer()
+                    log("🔄 Reset fishing inputs")
+                end)
+
+                task.wait(fishing.Settings.FishingDelay)
+                if fishing.Running then
+                    fishing.Cast()
+                end
+            end
+        end
+    end)
+
+    fishing.Connections.Caught = RE_FishCaught.OnClientEvent:Connect(function(name, data)
+        if fishing.Running then
+            fishing.WaitingHook = false
+            fishing.TotalFish += 1
+            local weight = data and data.Weight or 0
+            log("🐟 Ikan tertangkap: " .. tostring(name) .. " (" .. string.format("%.2f", weight) .. " kg)")
+
+            local success = pcall(function()
+                task.wait(fishing.Settings.CancelDelay)
+                RF_CancelFishingInputs:InvokeServer()
+                log("🔄 Reset setelah tangkapan")
+            end)
+
+            if not success then
+                log("⚠️ Gagal reset, melanjutkan...")
+            end
+
+            task.wait(fishing.Settings.FishingDelay)
+            if fishing.Running then
+                fishing.Cast()
+            end
+        end
+    end)
+
+    -- Disable animasi tiap 0.15s saat aktif
+    fishing.Connections.AnimDisabler = task.spawn(function()
+        while fishing.Running do
+            disableFishingAnim()
+            task.wait(0.15)
+        end
+    end)
+
     task.wait(0.5)
     fishing.Cast()
 end
 
 function fishing.Stop()
+    if not fishing.Running then return end
     fishing.Running = false
     fishing.WaitingHook = false
+
+    -- Putuskan semua koneksi aktif
+    for _, conn in pairs(fishing.Connections) do
+        if typeof(conn) == "RBXScriptConnection" then
+            conn:Disconnect()
+        elseif typeof(conn) == "thread" then
+            task.cancel(conn)
+        end
+    end
+    fishing.Connections = {}
+
     log("🛑 AUTO FISHING STOPPED")
 end
+
+-- ⚠️ Tidak ada auto-start di sini
+-- Script ini sekarang pasif, hanya aktif jika GUI memanggil:
+--     fishing.Start()
+-- dan berhenti jika GUI memanggil:
+--     fishing.Stop()
+
 return fishing
