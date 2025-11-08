@@ -63,7 +63,7 @@ function fishing.Cast()
         task.wait(0.07)
         RF_RequestMinigame:InvokeServer(9, 0, tick())
         log("🎯 Menunggu hook...")
-        fishing.WaitingHook = false
+        fishing.WaitingHook = true
         task.delay(1.1, function()
             if fishing.WaitingHook and fishing.Running then
                 fishing.WaitingHook = false
