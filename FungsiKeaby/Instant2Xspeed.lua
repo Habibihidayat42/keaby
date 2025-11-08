@@ -14,7 +14,7 @@ local RF_RequestMinigame = netFolder:WaitForChild("RF/RequestFishingMinigameStar
 local RF_CancelFishingInputs = netFolder:WaitForChild("RF/CancelFishingInputs")
 local RE_FishingCompleted = netFolder:WaitForChild("RE/FishingCompleted")
 local RE_MinigameChanged = netFolder:WaitForChild("RE/FishingMinigameChanged")
-local RE_FishCaught = netFolder:WaitForChild("RE/FishCaught")
+
 
 local fishing = {
     Running = false,
@@ -42,19 +42,6 @@ RE_MinigameChanged.OnClientEvent:Connect(function(state)
         task.wait(fishing.Settings.HookDelay)  -- Lebih cepat
         RE_FishingCompleted:FireServer()
         log("✅ HOOK DETECTED - Instant pull")
-        task.wait(fishing.Settings.CancelDelay)
-        RF_CancelFishingInputs:InvokeServer()
-        task.wait(fishing.Settings.FishingDelay)
-        if fishing.Running then fishing.Cast() end
-    end
-end)
-
-RE_FishCaught.OnClientEvent:Connect(function(name, data)
-    if fishing.Running then
-        fishing.WaitingHook = false
-        fishing.TotalFish = fishing.TotalFish + 1
-        local weight = data and data.Weight or 0
-        log("🐟 CAUGHT: " .. tostring(name) .. " (" .. string.format("%.2f", weight) .. " kg)")
         task.wait(fishing.Settings.CancelDelay)
         RF_CancelFishingInputs:InvokeServer()
         task.wait(fishing.Settings.FishingDelay)
