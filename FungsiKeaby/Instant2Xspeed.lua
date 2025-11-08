@@ -107,11 +107,4 @@ function fishing.SetTurboMode()
     }
     log("💨 TURBO MODE ACTIVATED!")
 end
-
--- Auto start dengan turbo mode
-task.delay(2, function()
-    fishing.SetTurboMode()
-    fishing.Start()
-end)
-
 return fishing
