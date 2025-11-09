@@ -1,4 +1,4 @@
--- Instant2Xspeed.lua - SIMPLE & SMOOTH AUTO FISHING (Fixed for less stutter)
+-- Instant2Xspeed.lua - SIMPLE & SMOOTH AUTO FISHING (Fixed for less stutter + Proper Cleanup)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer
@@ -15,6 +15,7 @@ local fishing = {
     WaitingHook = false,
     CurrentCycle = 0,
     TotalFish = 0,
+    Connections = {},  -- Store connections here for proper cleanup
 }
 _G.FishingScript = fishing
 local function log(msg)
@@ -29,7 +30,8 @@ local function recastIfRunning()
     end
 end
 
-RE_MinigameChanged.OnClientEvent:Connect(function(state)
+-- Connect events with proper storage
+fishing.Connections.MinigameChanged = RE_MinigameChanged.OnClientEvent:Connect(function(state)
     if fishing.WaitingHook and typeof(state) == "string" and string.find(string.lower(state), "hook") then
         fishing.WaitingHook = false
         RE_FishingCompleted:FireServer()
@@ -38,7 +40,7 @@ RE_MinigameChanged.OnClientEvent:Connect(function(state)
     end
 end)
 
-RE_FishCaught.OnClientEvent:Connect(function(name, data)
+fishing.Connections.FishCaught = RE_FishCaught.OnClientEvent:Connect(function(name, data)
     if fishing.Running then
         fishing.WaitingHook = false
         fishing.TotalFish = fishing.TotalFish + 1
@@ -60,8 +62,7 @@ function fishing.Cast()
         log("🎯 Cast " .. fishing.CurrentCycle)
         
         -- IMPROVED FALLBACK: Longer timeout to avoid early pulls, reducing failed attempts and stutter
-        -- This gives more time for hook detection, making it smoother and less frequent fallbacks
-        task.delay(2.5, function()  -- Increased from 1.5 to 2.5s for better hook wait
+        task.delay(2.5, function()
             if fishing.WaitingHook and fishing.Running then
                 fishing.WaitingHook = false
                 RE_FishingCompleted:FireServer()
@@ -86,6 +87,19 @@ function fishing.Stop()
     fishing.Running = false
     fishing.WaitingHook = false
     log("🛑 FISHING STOP")
+    
+    -- Proper cleanup: Disconnect all stored connections safely
+    for name, connection in pairs(fishing.Connections) do
+        if connection and typeof(connection) == "RBXScriptConnection" then
+            pcall(function()
+                connection:Disconnect()
+            end)
+            fishing.Connections[name] = nil
+        elseif typeof(connection) == "thread" then
+            -- If it's a thread by mistake, just warn and ignore (threads auto-finish)
+            warn("[Fishing] Warning: Found thread in connections, skipping Disconnect: " .. tostring(name))
+        end
+    end
 end
 
 return fishing
