@@ -35,7 +35,7 @@ local fishing = {
     Settings = {
         FishingDelay = 0.01,
         CancelDelay = 0.19,
-        HookDetectionDelay = 0.05,
+        HookDetectionDelay = 0.10,
         RetryDelay = 0.1,
         MaxWaitTime = 1.3,
     }
@@ -141,14 +141,18 @@ function fishing.Start()
     fishing.Connections.Minigame = RE_MinigameChanged.OnClientEvent:Connect(function(state)
         if fishing.WaitingHook and typeof(state) == "string" then
             local stateLower = string.lower(state)
-            if string.find(stateLower, "hook") or string.find(stateLower, "bite") or string.find(stateLower, "catch") then
+           if string.find(stateLower, "hook") or string.find(stateLower, "bite") or string.find(stateLower, "catch") then
                 fishing.WaitingHook = false
-                task.wait(fishing.Settings.HookDetectionDelay)
 
-                pcall(function()
-                    RE_FishingCompleted:FireServer()
-                    log("✅ Hook terdeteksi — ikan ditarik!")
+                -- ⚡ percepat sedikit (prediksi hook lebih awal)
+                task.spawn(function()
+                    task.wait(fishing.Settings.HookDetectionDelay * 0.7)
+                    pcall(function()
+                        RE_FishingCompleted:FireServer()
+                        log("✅ Hook cepat — ikan langsung ditarik!")
+                    end)
                 end)
+
 
                 task.wait(fishing.Settings.CancelDelay)
                 pcall(function()
