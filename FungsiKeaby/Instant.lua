@@ -35,7 +35,7 @@ local fishing = {
     Settings = {
         FishingDelay = 0.01,
         CancelDelay = 0.19,
-        HookDetectionDelay = 0.10,
+        HookDetectionDelay = 0.05,
         RetryDelay = 0.1,
         MaxWaitTime = 1.3,
     }
