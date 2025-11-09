@@ -93,11 +93,29 @@ function fishing.Cast()
         fishing.WaitingHook = true
         log("🎯 Menunggu hook...")
 
-        -- 🧠 NEW: Prediksi awal muncul tanda seru (simulate RE_MinigameChanged lebih cepat)
-        task.delay(fishing.Settings.EarlyMinigamePredict, function()
+      task.delay(fishing.Settings.EarlyMinigamePredict, function()
             if fishing.WaitingHook and fishing.Running then
-                log("⚡ [Predict] Memunculkan tanda seru lebih awal!")
-                RE_MinigameChanged:Fire("HookPredicted") -- memicu event lebih awal
+                log("⚡ [Predict] Memunculkan tanda seru lebih awal (simulasi lokal)")
+                -- panggil langsung fungsi listener lokal daripada :Fire()
+                task.spawn(function()
+                    -- simulasi event "Hook" lokal agar tidak error
+                    if fishing.Connections.Minigame and fishing.Connections.Minigame.Connected then
+                        -- langsung jalankan logika sama seperti event "Hook" dari server
+                        fishing.WaitingHook = false
+                        task.wait(fishing.Settings.HookDetectionDelay * 0.7)
+                        pcall(function()
+                            RE_FishingCompleted:FireServer()
+                            log("✅ (Prediksi) Hook cepat — ikan langsung ditarik!")
+                        end)
+                        task.wait(fishing.Settings.CancelDelay)
+                        pcall(function()
+                            RF_CancelFishingInputs:InvokeServer()
+                            log("🔄 (Prediksi) Reset fishing inputs")
+                        end)
+                        task.wait(fishing.Settings.FishingDelay)
+                        if fishing.Running then fishing.Cast() end
+                    end
+                end)
             end
         end)
 
