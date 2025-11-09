@@ -81,9 +81,15 @@ function fishing.Cast()
     log("⚡ Lempar pancing (Cycle: " .. fishing.CurrentCycle .. ")")
 
     local castSuccess = pcall(function()
+        -- Minta minigame lebih awal
+        task.spawn(function()
+            task.wait(0.03) -- panggil lebih cepat sedikit
+            pcall(function()
+                RF_RequestMinigame:InvokeServer(9, 0, tick())
+            end)
+        end)
+        -- Lempar kail
         RF_ChargeFishingRod:InvokeServer({[10] = tick()})
-        task.wait(0.07)
-        RF_RequestMinigame:InvokeServer(9, 0, tick())
         fishing.WaitingHook = true
         log("🎯 Menunggu hook...")
 
