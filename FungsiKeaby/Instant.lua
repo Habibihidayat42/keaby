@@ -36,7 +36,7 @@ local fishing = {
         FishingDelay = 0.01,
         CancelDelay = 0.19,
         HookDetectionDelay = 0.10,
-        RetryDelay = 0.01,
+        RetryDelay = 0,
         MaxWaitTime = 1.3,
         EarlyMinigamePredict = 0.07 -- masih bisa dipakai buat sync server timing
     }
