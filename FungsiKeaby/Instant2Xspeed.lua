@@ -1,4 +1,4 @@
--- ⚡ ULTRA SPEED AUTO FISHING (Instant2Xspeed.lua, no toggle key, Disable Anim v29.1 Style)
+-- ⚡ ULTRA SPEED AUTO FISHING (Instant2Xspeed.lua, no toggle key, Full Disable Animations)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer
@@ -7,9 +7,7 @@ local Humanoid = Character:WaitForChild("Humanoid")
 
 -- Hentikan script lama jika masih aktif
 if _G.FishingScript then
-    pcall(function()
-        _G.FishingScript.Stop()
-    end)
+    pcall(function() _G.FishingScript.Stop() end)
     task.wait(0.1)
 end
 
@@ -39,14 +37,40 @@ local fishing = {
         MaxWaitTime = 1.1,
     }
 }
-
 _G.FishingScript = fishing
 
 local function log(msg)
     print(("[Fishing] %s"):format(msg))
 end
 
--- 🧩 Disable animasi gaya v29.1
+---------------------------------------------------------------------
+-- 🔇 Fungsi untuk menonaktifkan SEMUA animasi di karakter
+---------------------------------------------------------------------
+local function disableAllAnimations()
+    pcall(function()
+        -- Hentikan semua track yang sedang dimainkan
+        for _, track in pairs(Humanoid:GetPlayingAnimationTracks()) do
+            track:Stop(0)
+        end
+
+        -- Nonaktifkan "Animate" default Roblox
+        local animate = Character:FindFirstChild("Animate")
+        if animate then
+            animate.Disabled = true
+        end
+
+        -- Hapus animator tambahan
+        for _, obj in ipairs(Character:GetDescendants()) do
+            if obj:IsA("Animator") or obj:IsA("Animation") or obj:IsA("AnimationTrack") then
+                pcall(function() obj:Destroy() end)
+            end
+        end
+    end)
+end
+
+---------------------------------------------------------------------
+-- 🧩 Disable animasi fishing + posisi rod (gaya v29.1)
+---------------------------------------------------------------------
 local function disableFishingAnim()
     pcall(function()
         for _, track in pairs(Humanoid:GetPlayingAnimationTracks()) do
@@ -57,7 +81,7 @@ local function disableFishingAnim()
         end
     end)
 
-    -- Atur ulang posisi rod agar sejajar dan stabil
+    -- Perbaiki posisi rod agar selalu stabil
     task.spawn(function()
         local rod = Character:FindFirstChild("Rod") or Character:FindFirstChildWhichIsA("Tool")
         if rod and rod:FindFirstChild("Handle") then
@@ -70,11 +94,14 @@ local function disableFishingAnim()
     end)
 end
 
--- 🎣 Fungsi cast utama
+---------------------------------------------------------------------
+-- 🎣 CAST utama
+---------------------------------------------------------------------
 function fishing.Cast()
     if not fishing.Running or fishing.WaitingHook then return end
 
     disableFishingAnim()
+    disableAllAnimations()
     fishing.CurrentCycle += 1
     log("⚡ Lempar pancing (Cycle " .. fishing.CurrentCycle .. ")")
 
@@ -85,13 +112,11 @@ function fishing.Cast()
         fishing.WaitingHook = true
         log("🎯 Menunggu hook...")
 
-        -- Proteksi timeout hook
+        -- Proteksi hook
         task.delay(fishing.Settings.MaxWaitTime * 0.7, function()
             if fishing.WaitingHook and fishing.Running then
                 log("⏰ Fallback 1 - Cek hook...")
-                pcall(function()
-                    RE_FishingCompleted:FireServer()
-                end)
+                pcall(function() RE_FishingCompleted:FireServer() end)
             end
         end)
 
@@ -99,17 +124,11 @@ function fishing.Cast()
             if fishing.WaitingHook and fishing.Running then
                 fishing.WaitingHook = false
                 log("⚠️ Timeout - tarik paksa")
-                pcall(function()
-                    RE_FishingCompleted:FireServer()
-                end)
+                pcall(function() RE_FishingCompleted:FireServer() end)
                 task.wait(fishing.Settings.RetryDelay)
-                pcall(function()
-                    RF_CancelFishingInputs:InvokeServer()
-                end)
+                pcall(function() RF_CancelFishingInputs:InvokeServer() end)
                 task.wait(fishing.Settings.FishingDelay)
-                if fishing.Running then
-                    fishing.Cast()
-                end
+                if fishing.Running then fishing.Cast() end
             end
         end)
     end)
@@ -121,16 +140,19 @@ function fishing.Cast()
     end
 end
 
--- 🚀 Start
+---------------------------------------------------------------------
+-- 🚀 START
+---------------------------------------------------------------------
 function fishing.Start()
     if fishing.Running then return end
     fishing.Running = true
     fishing.CurrentCycle = 0
     fishing.TotalFish = 0
+
     log("🚀 FISHING STARTED!")
+    disableAllAnimations()
     disableFishingAnim()
 
-    -- Hook event
     fishing.Connections.Minigame = RE_MinigameChanged.OnClientEvent:Connect(function(state)
         if fishing.WaitingHook and typeof(state) == "string" then
             local s = state:lower()
@@ -142,13 +164,9 @@ function fishing.Start()
                     log("✅ Hook terdeteksi — ikan ditarik!")
                 end)
                 task.wait(fishing.Settings.CancelDelay)
-                pcall(function()
-                    RF_CancelFishingInputs:InvokeServer()
-                end)
+                pcall(function() RF_CancelFishingInputs:InvokeServer() end)
                 task.wait(fishing.Settings.FishingDelay)
-                if fishing.Running then
-                    fishing.Cast()
-                end
+                if fishing.Running then fishing.Cast() end
             end
         end
     end)
@@ -159,29 +177,28 @@ function fishing.Start()
             fishing.TotalFish += 1
             log("🐟 Ikan tertangkap: " .. tostring(name))
             task.wait(fishing.Settings.CancelDelay)
-            pcall(function()
-                RF_CancelFishingInputs:InvokeServer()
-            end)
+            pcall(function() RF_CancelFishingInputs:InvokeServer() end)
             task.wait(fishing.Settings.FishingDelay)
-            if fishing.Running then
-                fishing.Cast()
-            end
+            if fishing.Running then fishing.Cast() end
         end
     end)
 
-    -- Disable animasi secara berkala
+    -- Loop disable animasi terus-menerus
     fishing.Connections.AnimLoop = task.spawn(function()
         while fishing.Running do
+            disableAllAnimations()
             disableFishingAnim()
             task.wait(0.15)
         end
     end)
 
-    task.wait(0.4)
+    task.wait(0.3)
     fishing.Cast()
 end
 
--- 🛑 Stop
+---------------------------------------------------------------------
+-- 🛑 STOP
+---------------------------------------------------------------------
 function fishing.Stop()
     if not fishing.Running then return end
     fishing.Running = false
