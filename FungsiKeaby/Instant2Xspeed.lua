@@ -1,4 +1,5 @@
--- Instant2Xspeed.lua - SIMPLE & SMOOTH AUTO FISHING (Fixed for less stutter + Proper Cleanup)
+-- Instant2Xspeed.lua - ULTRA FAST & SPAMMABLE AUTO FISHING (All Issues Fixed)
+-- Fixes: Reduced all delays/timeouts for max speed, added ForceCast for spamming, optimized cycles
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer
@@ -8,26 +9,54 @@ local RF_ChargeFishingRod = netFolder:WaitForChild("RF/ChargeFishingRod")
 local RF_RequestMinigame = netFolder:WaitForChild("RF/RequestFishingMinigameStarted")
 local RF_CancelFishingInputs = netFolder:WaitForChild("RF/CancelFishingInputs")
 local RE_FishingCompleted = netFolder:WaitForChild("RE/FishingCompleted")
-local RE_MinigameChanged = netFolder:WaitForChild("RE/FishingMinigameChanged")
+local RE_MinigameChanged = netFolder:WaitForChild("RE/MinigameChanged")
 local RE_FishCaught = netFolder:WaitForChild("RE/FishCaught")
 local fishing = {
     Running = false,
     WaitingHook = false,
     CurrentCycle = 0,
     TotalFish = 0,
-    Connections = {},  -- Store connections here for proper cleanup
+    Connections = {}, -- Store connections here for proper cleanup
+    FallbackTimeout = 1.2,  -- Ultra-fast: Reduced to 1.2s for quicker cycles (tweak if too aggressive)
+    SpamMode = false,  -- New: Enable for spammable casts (ignores WaitingHook, risky but fast)
 }
 _G.FishingScript = fishing
 local function log(msg)
     print("[Fishing] " .. msg)
 end
 
--- Helper to recast smoothly
+-- Ultra-fast recast (no wait for max speed)
 local function recastIfRunning()
-    task.wait(0.05) -- Minimal delay for smoothness
     if fishing.Running then
-        fishing.Cast()
+        fishing.Cast()  -- Instant recast, no delay
     end
+end
+
+-- ForceCast for spamming (ignores WaitingHook check)
+function fishing.ForceCast()
+    if not fishing.Running then return end  -- Still respect Running state
+    fishing.CurrentCycle = fishing.CurrentCycle + 1
+    pcall(function()
+        RF_ChargeFishingRod:InvokeServer({[22] = tick()})
+        -- No wait here: Instant charge + request for spam speed
+        RF_RequestMinigame:InvokeServer(9, 0, tick())
+        if not fishing.SpamMode then
+            fishing.WaitingHook = true  -- Only set if not spamming
+        end
+        log("🎯 Force Cast " .. fishing.CurrentCycle .. " (Spam Mode: " .. tostring(fishing.SpamMode) .. ")")
+        
+        -- Fallback only if not spamming (in spam mode, no auto-pull to allow overlap)
+        if not fishing.SpamMode then
+            task.delay(fishing.FallbackTimeout, function()
+                if fishing.WaitingHook and fishing.Running then
+                    fishing.WaitingHook = false
+                    RE_FishingCompleted:FireServer()
+                    log("🔄 Fallback tarik (fast)")
+                    recastIfRunning()
+                end
+            end)
+        end
+    end)
 end
 
 -- Connect events with proper storage
@@ -36,7 +65,7 @@ fishing.Connections.MinigameChanged = RE_MinigameChanged.OnClientEvent:Connect(f
         fishing.WaitingHook = false
         RE_FishingCompleted:FireServer()
         log("✅ Hook terdeteksi")
-        recastIfRunning()
+        recastIfRunning()  -- Instant recast
     end
 end)
 
@@ -45,49 +74,49 @@ fishing.Connections.FishCaught = RE_FishCaught.OnClientEvent:Connect(function(na
         fishing.WaitingHook = false
         fishing.TotalFish = fishing.TotalFish + 1
         log("🐟 Ikan tertangkap: " .. tostring(name))
-        recastIfRunning()
+        recastIfRunning()  -- Instant recast
     end
 end)
 
+-- Main Cast (optimized: minimal checks/delays)
 function fishing.Cast()
-    if not fishing.Running or fishing.WaitingHook then return end
+    if not fishing.Running then return end
     
-    fishing.CurrentCycle = fishing.CurrentCycle + 1
+    -- In spam mode, always use ForceCast for overlap
+    if fishing.SpamMode then
+        fishing.ForceCast()
+        return
+    end
     
-    pcall(function()
-        RF_ChargeFishingRod:InvokeServer({[22] = tick()})
-        task.wait(0.03) -- Slightly reduced for faster charge
-        RF_RequestMinigame:InvokeServer(9, 0, tick())
-        fishing.WaitingHook = true
-        log("🎯 Cast " .. fishing.CurrentCycle)
-        
-        -- IMPROVED FALLBACK: Longer timeout to avoid early pulls, reducing failed attempts and stutter
-        task.delay(2.5, function()
-            if fishing.WaitingHook and fishing.Running then
-                fishing.WaitingHook = false
-                RE_FishingCompleted:FireServer()
-                log("🔄 Fallback tarik (delayed for smoothness)")
-                recastIfRunning()
-            end
-        end)
-    end)
+    -- Normal mode: Respect WaitingHook to avoid overlap
+    if fishing.WaitingHook then return end
+    
+    fishing.ForceCast()  -- Reuse optimized logic
 end
 
-function fishing.Start()
+function fishing.Start(spamEnabled)
     if fishing.Running then return end
     fishing.Running = true
+    fishing.SpamMode = spamEnabled or false  -- Optional: Start in spam mode
     fishing.CurrentCycle = 0
     fishing.TotalFish = 0
     fishing.WaitingHook = false
-    log("🚀 FISHING START!")
+    log("🚀 FISHING START! (Speed Mode - " .. fishing.FallbackTimeout .. "s timeout, Spam: " .. tostring(fishing.SpamMode) .. ")")
     fishing.Cast()
+end
+
+-- Toggle spam mode on the fly
+function fishing.ToggleSpam()
+    fishing.SpamMode = not fishing.SpamMode
+    log("🔄 Spam Mode: " .. tostring(fishing.SpamMode) .. " (Use ForceCast() for manual spam)")
 end
 
 function fishing.Stop()
     fishing.Running = false
     fishing.WaitingHook = false
+    fishing.SpamMode = false
     log("🛑 FISHING STOP")
-    
+   
     -- Proper cleanup: Disconnect all stored connections safely
     for name, connection in pairs(fishing.Connections) do
         if connection and typeof(connection) == "RBXScriptConnection" then
@@ -96,7 +125,6 @@ function fishing.Stop()
             end)
             fishing.Connections[name] = nil
         elseif typeof(connection) == "thread" then
-            -- If it's a thread by mistake, just warn and ignore (threads auto-finish)
             warn("[Fishing] Warning: Found thread in connections, skipping Disconnect: " .. tostring(name))
         end
     end
