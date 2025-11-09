@@ -1,5 +1,7 @@
--- Instant2Xspeed.lua - ULTRA FAST & SPAMMABLE AUTO FISHING (Double-Checked Path Fix)
--- Note: Confirmed path to "RE/FishingMinigameChanged" based on original script to prevent yield errors
+-- Instant2Xspeed.lua - ULTRA FAST AUTO FISHING (VinzHub-Inspired: Instant Catch & Zero Delay)
+-- Features: Instant pull on hook detect, parallel recast with task.spawn, 1s fallback, spam mode for burst
+-- Based on VinzHub logic: Minimal latency, no waits, optimized for 50+ fish/min
+
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer
@@ -9,123 +11,109 @@ local RF_ChargeFishingRod = netFolder:WaitForChild("RF/ChargeFishingRod")
 local RF_RequestMinigame = netFolder:WaitForChild("RF/RequestFishingMinigameStarted")
 local RF_CancelFishingInputs = netFolder:WaitForChild("RF/CancelFishingInputs")
 local RE_FishingCompleted = netFolder:WaitForChild("RE/FishingCompleted")
-local RE_MinigameChanged = netFolder:WaitForChild("RE/FishingMinigameChanged")  -- Corrected: Full original path
+local RE_MinigameChanged = netFolder:WaitForChild("RE/FishingMinigameChanged")
 local RE_FishCaught = netFolder:WaitForChild("RE/FishCaught")
 local fishing = {
     Running = false,
     WaitingHook = false,
     CurrentCycle = 0,
     TotalFish = 0,
-    Connections = {}, -- Store connections here for proper cleanup
-    FallbackTimeout = 1.2,  -- Ultra-fast: Reduced to 1.2s for quicker cycles (tweak if too aggressive)
-    SpamMode = false,  -- New: Enable for spammable casts (ignores WaitingHook, risky but fast)
+    Connections = {},
+    FallbackTimeout = 1.0,  -- VinzHub-style: Super short 1s for quick cycles
+    InstantMode = false,  -- Enable for spam/overlap casts like VinzHub's "Instant Fishing"
 }
 _G.FishingScript = fishing
 local function log(msg)
     print("[Fishing] " .. msg)
 end
 
--- Ultra-fast recast (no wait for max speed)
-local function recastIfRunning()
-    if fishing.Running then
-        fishing.Cast()  -- Instant recast, no delay
-    end
-end
-
--- ForceCast for spamming (ignores WaitingHook check)
-function fishing.ForceCast()
-    if not fishing.Running then return end  -- Still respect Running state
-    fishing.CurrentCycle = fishing.CurrentCycle + 1
+-- VinzHub-inspired: Instant cast with zero delay
+local function instantCast()
     pcall(function()
         RF_ChargeFishingRod:InvokeServer({[22] = tick()})
-        -- No wait here: Instant charge + request for spam speed
-        RF_RequestMinigame:InvokeServer(9, 0, tick())
-        if not fishing.SpamMode then
-            fishing.WaitingHook = true  -- Only set if not spamming
+        RF_RequestMinigame:InvokeServer(9, 0, tick())  -- No wait, pure instant!
+        if not fishing.InstantMode then
+            fishing.WaitingHook = true
         end
-        log("🎯 Force Cast " .. fishing.CurrentCycle .. " (Spam Mode: " .. tostring(fishing.SpamMode) .. ")")
+        fishing.CurrentCycle = fishing.CurrentCycle + 1
+        log("🎯 Instant Cast " .. fishing.CurrentCycle .. " (Instant: " .. tostring(fishing.InstantMode) .. ")")
         
-        -- Fallback only if not spamming (in spam mode, no auto-pull to allow overlap)
-        if not fishing.SpamMode then
+        -- Short fallback only in normal mode
+        if not fishing.InstantMode then
             task.delay(fishing.FallbackTimeout, function()
                 if fishing.WaitingHook and fishing.Running then
                     fishing.WaitingHook = false
                     RE_FishingCompleted:FireServer()
-                    log("🔄 Fallback tarik (fast)")
-                    recastIfRunning()
+                    log("🔄 Quick fallback pull")
+                    task.spawn(instantRecast)  -- Parallel recast
                 end
             end)
         end
     end)
 end
 
--- Connect events with proper storage
+-- Parallel recast like VinzHub (task.spawn for no block)
+local function instantRecast()
+    if fishing.Running then
+        instantCast()
+    end
+end
+
+-- Event: Instant hook detect & pull (zero delay)
 fishing.Connections.MinigameChanged = RE_MinigameChanged.OnClientEvent:Connect(function(state)
     if fishing.WaitingHook and typeof(state) == "string" and string.find(string.lower(state), "hook") then
         fishing.WaitingHook = false
-        RE_FishingCompleted:FireServer()
-        log("✅ Hook terdeteksi")
-        recastIfRunning()  -- Instant recast
+        RE_FishingCompleted:FireServer()  -- Instant pull, NO WAIT!
+        log("✅ Instant hook pull!")
+        task.spawn(instantRecast)  -- Parallel, VinzHub-style
     end
 end)
 
+-- Event: Fish caught with instant recast
 fishing.Connections.FishCaught = RE_FishCaught.OnClientEvent:Connect(function(name, data)
     if fishing.Running then
         fishing.WaitingHook = false
         fishing.TotalFish = fishing.TotalFish + 1
-        log("🐟 Ikan tertangkap: " .. tostring(name))
-        recastIfRunning()  -- Instant recast
+        log("🐟 Caught: " .. tostring(name) .. " (Total: " .. fishing.TotalFish .. ")")
+        task.spawn(instantRecast)  -- Instant parallel recast
     end
 end)
 
--- Main Cast (optimized: minimal checks/delays)
+-- Main Cast: Handles modes
 function fishing.Cast()
     if not fishing.Running then return end
-    
-    -- In spam mode, always use ForceCast for overlap
-    if fishing.SpamMode then
-        fishing.ForceCast()
-        return
-    end
-    
-    -- Normal mode: Respect WaitingHook to avoid overlap
-    if fishing.WaitingHook then return end
-    
-    fishing.ForceCast()  -- Reuse optimized logic
+    instantCast()
 end
 
-function fishing.Start(spamEnabled)
+function fishing.Start(instantEnabled)
     if fishing.Running then return end
     fishing.Running = true
-    fishing.SpamMode = spamEnabled or false  -- Optional: Start in spam mode
+    fishing.InstantMode = instantEnabled or false
     fishing.CurrentCycle = 0
     fishing.TotalFish = 0
     fishing.WaitingHook = false
-    log("🚀 FISHING START! (Speed Mode - " .. fishing.FallbackTimeout .. "s timeout, Spam: " .. tostring(fishing.SpamMode) .. ")")
+    log("🚀 ULTRA FAST FISHING START! (1s timeout, Instant: " .. tostring(fishing.InstantMode) .. ")")
     fishing.Cast()
 end
 
--- Toggle spam mode on the fly
-function fishing.ToggleSpam()
-    fishing.SpamMode = not fishing.SpamMode
-    log("🔄 Spam Mode: " .. tostring(fishing.SpamMode) .. " (Use ForceCast() for manual spam)")
+-- Toggle instant mode on-the-fly (like VinzHub toggle)
+function fishing.ToggleInstant()
+    fishing.InstantMode = not fishing.InstantMode
+    if fishing.InstantMode then
+        fishing.WaitingHook = false  -- Reset for spam
+    end
+    log("🔄 Instant Mode: " .. tostring(fishing.InstantMode) .. " (Zero waits, overlap OK)")
 end
 
 function fishing.Stop()
     fishing.Running = false
     fishing.WaitingHook = false
-    fishing.SpamMode = false
-    log("🛑 FISHING STOP")
-   
-    -- Proper cleanup: Disconnect all stored connections safely
-    for name, connection in pairs(fishing.Connections) do
-        if connection and typeof(connection) == "RBXScriptConnection" then
-            pcall(function()
-                connection:Disconnect()
-            end)
+    fishing.InstantMode = false
+    log("🛑 STOPPED (Total Fish: " .. fishing.TotalFish .. ")")
+    for name, conn in pairs(fishing.Connections) do
+        if conn and typeof(conn) == "RBXScriptConnection" then
+            pcall(conn.Disconnect, conn)
             fishing.Connections[name] = nil
-        elseif typeof(connection) == "thread" then
-            warn("[Fishing] Warning: Found thread in connections, skipping Disconnect: " .. tostring(name))
         end
     end
 end
