@@ -83,7 +83,7 @@ function fishing.Cast()
     local castSuccess = pcall(function()
         -- Minta minigame lebih awal
         task.spawn(function()
-            task.wait(0.03) -- panggil lebih cepat sedikit
+            task.wait(0.10) -- panggil lebih cepat sedikit
             pcall(function()
                 RF_RequestMinigame:InvokeServer(9, 0, tick())
             end)
