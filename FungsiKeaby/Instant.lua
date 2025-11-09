@@ -1,4 +1,4 @@
--- ⚡ ULTRA SPEED AUTO FISHING v29.2 (No Auto-Start / Controlled by GUI + Early Minigame Predict)
+-- ⚡ ULTRA SPEED AUTO FISHING v29.2 (No Auto-Start / Controlled by GUI - Clean Version)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer
@@ -38,7 +38,7 @@ local fishing = {
         HookDetectionDelay = 0.10,
         RetryDelay = 0.1,
         MaxWaitTime = 1.3,
-        EarlyMinigamePredict = 0.07 -- ⏱️ waktu sebelum tanda seru muncul lebih awal
+        EarlyMinigamePredict = 0.07 -- masih bisa dipakai buat sync server timing
     }
 }
 
@@ -48,7 +48,7 @@ local function log(msg)
     print(("[Fishing] %s"):format(msg))
 end
 
--- Disable semua animasi fishing
+-- Nonaktifkan animasi fishing
 local function disableFishingAnim()
     pcall(function()
         for _, track in pairs(Humanoid:GetPlayingAnimationTracks()) do
@@ -81,43 +81,18 @@ function fishing.Cast()
     log("⚡ Lempar pancing (Cycle: " .. fishing.CurrentCycle .. ")")
 
     local castSuccess = pcall(function()
-        -- Minta minigame lebih awal
+        -- Minta minigame lebih awal untuk percepatan respon server
         task.spawn(function()
-            task.wait(0.01) -- panggil lebih cepat sedikit
+            task.wait(0.01)
             pcall(function()
                 RF_RequestMinigame:InvokeServer(9, 0, tick())
             end)
         end)
+
         -- Lempar kail
         RF_ChargeFishingRod:InvokeServer({[10] = tick()})
         fishing.WaitingHook = true
         log("🎯 Menunggu hook...")
-
-      task.delay(fishing.Settings.EarlyMinigamePredict, function()
-            if fishing.WaitingHook and fishing.Running then
-                log("⚡ [Predict] Memunculkan tanda seru lebih awal (simulasi lokal)")
-                -- panggil langsung fungsi listener lokal daripada :Fire()
-                task.spawn(function()
-                    -- simulasi event "Hook" lokal agar tidak error
-                    if fishing.Connections.Minigame and fishing.Connections.Minigame.Connected then
-                        -- langsung jalankan logika sama seperti event "Hook" dari server
-                        fishing.WaitingHook = false
-                        task.wait(fishing.Settings.HookDetectionDelay * 0.7)
-                        pcall(function()
-                            RE_FishingCompleted:FireServer()
-                            log("✅ (Prediksi) Hook cepat — ikan langsung ditarik!")
-                        end)
-                        task.wait(fishing.Settings.CancelDelay)
-                        pcall(function()
-                            RF_CancelFishingInputs:InvokeServer()
-                            log("🔄 (Prediksi) Reset fishing inputs")
-                        end)
-                        task.wait(fishing.Settings.FishingDelay)
-                        if fishing.Running then fishing.Cast() end
-                    end
-                end)
-            end
-        end)
 
         -- Timeout protection
         task.delay(fishing.Settings.MaxWaitTime * 0.7, function()
@@ -226,8 +201,11 @@ function fishing.Stop()
     fishing.Running = false
     fishing.WaitingHook = false
     for _, conn in pairs(fishing.Connections) do
-        if typeof(conn) == "RBXScriptConnection" then conn:Disconnect()
-        elseif typeof(conn) == "thread" then task.cancel(conn) end
+        if typeof(conn) == "RBXScriptConnection" then
+            conn:Disconnect()
+        elseif typeof(conn) == "thread" then
+            task.cancel(conn)
+        end
     end
     fishing.Connections = {}
     log("🛑 AUTO FISHING STOPPED")
