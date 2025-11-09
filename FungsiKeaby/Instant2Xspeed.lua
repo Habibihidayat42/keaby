@@ -1,4 +1,4 @@
- -- Instant2Xspeed.lua (no toggle key) - ULTRA SPEED AUTO FISHING
+-- Instant2Xspeed.lua (no toggle key) - ULTRA SPEED AUTO FISHING
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer
@@ -21,24 +21,46 @@ local fishing = {
     Settings = {
         FishingDelay = 0.3,
         CancelDelay = 0.05,
+        HookTimeout = 1.3, -- Increased timeout for better reliability
     },
 }
 _G.FishingScript = fishing
+
+-- Track timeout tasks to prevent conflicts
+fishing.ActiveTimeout = nil
 
 local function log(msg)
     print("[Fishing] " .. msg)
 end
 
+local function safeCancel()
+    pcall(function() 
+        RF_CancelFishingInputs:InvokeServer() 
+    end)
+end
+
+local function nextCast()
+    if not fishing.Running then return end
+    task.wait(fishing.Settings.CancelDelay)
+    safeCancel()
+    task.wait(fishing.Settings.FishingDelay)
+    if fishing.Running then 
+        fishing.Cast() 
+    end
+end
+
 RE_MinigameChanged.OnClientEvent:Connect(function(state)
     if fishing.WaitingHook and typeof(state) == "string" and string.find(string.lower(state), "hook") then
         fishing.WaitingHook = false
+        -- Cancel any pending timeout
+        if fishing.ActiveTimeout then
+            fishing.ActiveTimeout:Disconnect()
+            fishing.ActiveTimeout = nil
+        end
         task.wait(0.30)
         RE_FishingCompleted:FireServer()
         log("✅ Hook terdeteksi — ikan ditarik.")
-        task.wait(fishing.Settings.CancelDelay)
-        pcall(function() RF_CancelFishingInputs:InvokeServer() end)
-        task.wait(fishing.Settings.FishingDelay)
-        if fishing.Running then fishing.Cast() end
+        nextCast()
     end
 end)
 
@@ -47,15 +69,24 @@ RE_FishCaught.OnClientEvent:Connect(function(name, data)
         fishing.WaitingHook = false
         fishing.TotalFish = fishing.TotalFish + 1
         log("🐟 Ikan tertangkap: " .. tostring(name))
-        task.wait(fishing.Settings.CancelDelay)
-        pcall(function() RF_CancelFishingInputs:InvokeServer() end)
-        task.wait(fishing.Settings.FishingDelay)
-        if fishing.Running then fishing.Cast() end
+        -- Cancel any pending timeout
+        if fishing.ActiveTimeout then
+            fishing.ActiveTimeout:Disconnect()
+            fishing.ActiveTimeout = nil
+        end
+        nextCast()
     end
 end)
 
 function fishing.Cast()
     if not fishing.Running or fishing.WaitingHook then return end
+    
+    -- Clean up any previous timeout
+    if fishing.ActiveTimeout then
+        fishing.ActiveTimeout:Disconnect()
+        fishing.ActiveTimeout = nil
+    end
+    
     fishing.CurrentCycle = fishing.CurrentCycle + 1
     pcall(function()
         RF_ChargeFishingRod:InvokeServer({[22] = tick()})
@@ -64,15 +95,15 @@ function fishing.Cast()
         RF_RequestMinigame:InvokeServer(9, 0, tick())
         log("🎯 Menunggu hook...")
         fishing.WaitingHook = true
-        task.delay(1.1, function()
+        
+        -- Improved timeout with connection tracking
+        fishing.ActiveTimeout = task.delay(fishing.Settings.HookTimeout, function()
             if fishing.WaitingHook and fishing.Running then
                 fishing.WaitingHook = false
+                fishing.ActiveTimeout = nil
                 RE_FishingCompleted:FireServer()
-                log("⚠️ Timeout pendek — fallback tarik cepat.")
-                task.wait(fishing.Settings.CancelDelay)
-                pcall(function() RF_CancelFishingInputs:InvokeServer() end)
-                task.wait(fishing.Settings.FishingDelay)
-                if fishing.Running then fishing.Cast() end
+                log("⚠️ Timeout — fallback tarik cepat.")
+                nextCast()
             end
         end)
     end)
@@ -83,6 +114,8 @@ function fishing.Start()
     fishing.Running = true
     fishing.CurrentCycle = 0
     fishing.TotalFish = 0
+    fishing.WaitingHook = false
+    fishing.ActiveTimeout = nil
     log("🚀 FISHING STARTED!")
     fishing.Cast()
 end
@@ -90,6 +123,11 @@ end
 function fishing.Stop()
     fishing.Running = false
     fishing.WaitingHook = false
+    -- Clean up timeout
+    if fishing.ActiveTimeout then
+        fishing.ActiveTimeout:Disconnect()
+        fishing.ActiveTimeout = nil
+    end
     log("🛑 FISHING STOPPED")
 end
 
