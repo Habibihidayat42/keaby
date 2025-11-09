@@ -20,7 +20,7 @@ local fishing = {
     Settings = {
         FishingDelay = 0.3,
         CancelDelay = 0.05,
-        MaxWaitTime = 5, -- fallback timeout aman
+        MaxWaitTime = 0.2, -- fallback timeout aman
         FallbackCheckInterval = 0.05,
     },
 }
