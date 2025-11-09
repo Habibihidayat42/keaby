@@ -57,6 +57,18 @@ local function disableFishingAnim()
         end
     end)
 
+    -- Atur ulang posisi rod agar sejajar dan stabil
+    task.spawn(function()
+        local rod = Character:FindFirstChild("Rod") or Character:FindFirstChildWhichIsA("Tool")
+        if rod and rod:FindFirstChild("Handle") then
+            local handle = rod.Handle
+            local weld = handle:FindFirstChildOfClass("Weld") or handle:FindFirstChildOfClass("Motor6D")
+            if weld then
+                weld.C0 = CFrame.new(0, -1, -1.2) * CFrame.Angles(math.rad(-10), 0, 0)
+            end
+        end
+    end)
+end
 
 -- 🎣 Fungsi cast utama
 function fishing.Cast()
