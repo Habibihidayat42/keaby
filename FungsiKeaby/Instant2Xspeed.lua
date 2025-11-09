@@ -1,4 +1,4 @@
--- Instant2Xspeed.lua (no toggle key) - ULTRA SPEED AUTO FISHING
+ -- Instant2Xspeed.lua (no toggle key) - ULTRA SPEED AUTO FISHING
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer
