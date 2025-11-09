@@ -1,4 +1,4 @@
--- ⚡ ULTRA SPEED AUTO FISHING v29.2 (No Auto-Start / Controlled by GUI - Clean No-Fallback)
+ -- ⚡ ULTRA SPEED AUTO FISHING v29.2 (No Auto-Start / Controlled by GUI - Clean Version) 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer
@@ -36,7 +36,8 @@ local fishing = {
         FishingDelay = 0.01,
         CancelDelay = 0.19,
         HookDetectionDelay = 0.10,
-        RetryDelay = 0.1,
+        RetryDelay = 0.01,
+        MaxWaitTime = 1.3,
         EarlyMinigamePredict = 0.07 -- masih bisa dipakai buat sync server timing
     }
 }
@@ -92,6 +93,36 @@ function fishing.Cast()
         RF_ChargeFishingRod:InvokeServer({[10] = tick()})
         fishing.WaitingHook = true
         log("🎯 Menunggu hook...")
+
+        -- Timeout protection
+        task.delay(fishing.Settings.MaxWaitTime * 0.7, function()
+            if fishing.WaitingHook and fishing.Running then
+                log("⏰ Fallback 1 - Cek hook...")
+                pcall(function()
+                    RE_FishingCompleted:FireServer()
+                end)
+            end
+        end)
+
+        task.delay(fishing.Settings.MaxWaitTime, function()
+            if fishing.WaitingHook and fishing.Running then
+                fishing.WaitingHook = false
+                log("⚠️ Timeout - Fallback tarik paksa")
+                pcall(function()
+                    RE_FishingCompleted:FireServer()
+                end)
+
+                task.wait(fishing.Settings.RetryDelay)
+                pcall(function()
+                    RF_CancelFishingInputs:InvokeServer()
+                end)
+
+                task.wait(fishing.Settings.FishingDelay)
+                if fishing.Running then
+                    fishing.Cast()
+                end
+            end
+        end)
     end)
 
     if not castSuccess then
