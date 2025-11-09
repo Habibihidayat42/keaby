@@ -1,8 +1,38 @@
--- Instant2Xspeed.lua (no toggle key) - ULTRA SPEED AUTO FISHING
+-- ⚡ ULTRA SPEED AUTO FISHING (Instant2Xspeed.lua, no toggle key, Disable Animations)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer
+local Character = localPlayer.Character or localPlayer.CharacterAdded:Wait()
 
+-- 🔇 Fungsi Disable Animations
+local function disableAnimations()
+    for _, obj in ipairs(Character:GetDescendants()) do
+        if obj:IsA("Animator") or obj:IsA("Animation") or obj:IsA("AnimationTrack") then
+            pcall(function() obj:Destroy() end)
+        end
+    end
+    local humanoid = Character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        pcall(function()
+            local animate = Character:FindFirstChild("Animate")
+            if animate then animate.Disabled = true end
+            for _, playingAnim in ipairs(humanoid:GetPlayingAnimationTracks()) do
+                playingAnim:Stop()
+            end
+        end)
+    end
+end
+
+-- Jalankan disable animasi awal
+disableAnimations()
+-- Pastikan animasi tetap nonaktif ketika respawn
+localPlayer.CharacterAdded:Connect(function(char)
+    Character = char
+    task.wait(1)
+    disableAnimations()
+end)
+
+-- 🎣 Core Fishing System
 local netFolder = ReplicatedStorage:WaitForChild("Packages"):WaitForChild("_Index")
     :WaitForChild("sleitnick_net@0.2.0"):WaitForChild("net")
 
@@ -29,6 +59,7 @@ local function log(msg)
     print("[Fishing] " .. msg)
 end
 
+-- Hook detection
 RE_MinigameChanged.OnClientEvent:Connect(function(state)
     if fishing.WaitingHook and typeof(state) == "string" and string.find(string.lower(state), "hook") then
         fishing.WaitingHook = false
@@ -42,6 +73,7 @@ RE_MinigameChanged.OnClientEvent:Connect(function(state)
     end
 end)
 
+-- Fish caught event
 RE_FishCaught.OnClientEvent:Connect(function(name, data)
     if fishing.Running then
         fishing.WaitingHook = false
@@ -54,6 +86,7 @@ RE_FishCaught.OnClientEvent:Connect(function(name, data)
     end
 end)
 
+-- Casting logic
 function fishing.Cast()
     if not fishing.Running or fishing.WaitingHook then return end
     fishing.CurrentCycle = fishing.CurrentCycle + 1
@@ -64,6 +97,8 @@ function fishing.Cast()
         RF_RequestMinigame:InvokeServer(9, 0, tick())
         log("🎯 Menunggu hook...")
         fishing.WaitingHook = true
+
+        -- Fallback cepat jika hook tidak muncul
         task.delay(1.1, function()
             if fishing.WaitingHook and fishing.Running then
                 fishing.WaitingHook = false
