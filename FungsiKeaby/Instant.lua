@@ -94,35 +94,42 @@ function fishing.Cast()
         fishing.WaitingHook = true
         log("🎯 Menunggu hook...")
 
-        -- Timeout protection
-        task.delay(fishing.Settings.MaxWaitTime * 0.7, function()
-            if fishing.WaitingHook and fishing.Running then
-                log("⏰ Fallback 1 - Cek hook...")
-                pcall(function()
-                    RE_FishingCompleted:FireServer()
-                end)
-            end
-        end)
+       -- Timeout protection (versi non-blocking & aman dari double fallback)
+       local currentCycle = fishing.CurrentCycle
+       task.spawn(function()
+           local waited = 0
+           while fishing.Running and fishing.WaitingHook and waited < fishing.Settings.MaxWaitTime do
+               task.wait(0.05)
+               waited += 0.05
+       
+               -- Stop loop jika hook sudah berhasil
+               if not fishing.WaitingHook or fishing.CurrentCycle ~= currentCycle then
+                   return
+               end
+           end
+       
+           -- Fallback hanya sekali
+           if fishing.Running and fishing.WaitingHook and fishing.CurrentCycle == currentCycle then
+               fishing.WaitingHook = false
+               log("⚠️ Timeout fallback (Cycle " .. currentCycle .. ")")
+       
+               pcall(function()
+                   RE_FishingCompleted:FireServer()
+               end)
+       
+               pcall(function()
+                   RF_CancelFishingInputs:InvokeServer()
+               end)
+       
+               -- Jeda ringan biar server siap untuk cast baru
+               task.wait(fishing.Settings.FishingDelay * 0.5)
+       
+               if fishing.Running then
+                   fishing.Cast()
+               end
+           end
+       end)
 
-        task.delay(fishing.Settings.MaxWaitTime, function()
-            if fishing.WaitingHook and fishing.Running then
-                fishing.WaitingHook = false
-                log("⚠️ Timeout - Fallback tarik paksa")
-                pcall(function()
-                    RE_FishingCompleted:FireServer()
-                end)
-
-                task.wait(fishing.Settings.RetryDelay)
-                pcall(function()
-                    RF_CancelFishingInputs:InvokeServer()
-                end)
-
-                task.wait(fishing.Settings.FishingDelay)
-                if fishing.Running then
-                    fishing.Cast()
-                end
-            end
-        end)
     end)
 
     if not castSuccess then
