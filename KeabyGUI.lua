@@ -23,6 +23,8 @@ local TeleportModule = loadstring(game:HttpGet("https://raw.githubusercontent.co
 local TeleportToPlayer = loadstring(game:HttpGet("https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/TeleportSystem/TeleportToPlayer.lua"))()
 local AutoSell = loadstring(game:HttpGet("https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/ShopFeatures/AutoSell.lua"))()
 local AutoSellTimer = loadstring(game:HttpGet("https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/ShopFeatures/AutoSellTimer.lua"))()
+local AntiAFK = loadstring(game:HttpGet("https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/Misc/AntiAFK.lua"))()
+
 
 -- Ultra Modern Cyberpunk Palette
 local colors = {
@@ -1063,6 +1065,17 @@ end)
 
 -- Settings Page
 local settingsPnl = makePanel(settingsPage,"⚙️ General Settings","")
+-- ⚙️ Misc Features Page
+local pnlMisc = makePanel(miscPage, "💤 Anti AFK System", "")
+
+makeSwitch(pnlMisc, "Enable Anti-AFK", false, function(on)
+    if on then
+        AntiAFK.Start()
+    else
+        AntiAFK.Stop()
+    end
+end)
+
 makeToggle(settingsPnl,"Auto Save Settings",function(on) print("Auto Save:",on) end)
 makeToggle(settingsPnl,"Show Notifications",function(on) print("Notifications:",on) end)
 makeToggle(settingsPnl,"Performance Mode",function(on) print("Performance:",on) end)
