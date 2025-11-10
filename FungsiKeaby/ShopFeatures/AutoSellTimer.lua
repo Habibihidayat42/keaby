@@ -15,6 +15,7 @@ function AutoSellTimer.Start(interval)
 		AutoSellTimer.Interval = tonumber(interval)
 	end
 
+	local AutoSell = _G.AutoSell
 	if not AutoSell then
 		warn("❌ Modul AutoSell belum dimuat!")
 		return
