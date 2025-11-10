@@ -22,6 +22,7 @@ local instant2x = loadstring(game:HttpGet("https://raw.githubusercontent.com/Hab
 local TeleportModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/TeleportModule.lua"))()
 local TeleportToPlayer = loadstring(game:HttpGet("https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/TeleportSystem/TeleportToPlayer.lua"))()
 local AutoSell = loadstring(game:HttpGet("https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/ShopFeatures/AutoSell.lua"))()
+local AutoSellTimer = loadstring(game:HttpGet("https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/ShopFeatures/AutoSellTimer.lua"))()
 
 -- Ultra Modern Cyberpunk Palette
 local colors = {
@@ -963,6 +964,19 @@ makeButton(pnlSell, "Sell All", function()
 		AutoSell.SellOnce()
 	else
 		warn("❌ AutoSell module not loaded or missing SellOnce()")
+	end
+end)
+
+local pnlTimer = makePanel(shopPage, "⏰ Auto Sell Timer", "")
+makeSlider(pnlTimer, "Interval (detik)", 1, 60, 5, function(v)
+	AutoSellTimer.SetInterval(v)
+end)
+
+makeToggle(pnlTimer, "Enable Auto Sell Timer", function(on)
+	if on then
+		AutoSellTimer.Start(AutoSellTimer.Interval)
+	else
+		AutoSellTimer.Stop()
 	end
 end)
 
