@@ -1065,10 +1065,10 @@ end)
 
 -- Settings Page
 local settingsPnl = makePanel(settingsPage,"⚙️ General Settings","")
--- ⚙️ Misc Features Page
-local pnlMisc = makePanel(miscPage, "💤 Anti AFK System", "")
+-- 🔒 Anti-AFK Panel
+local pnlAntiAFK = makePanel(settingsPage, "Anti-AFK Protection", "🧍‍♂️")
 
-makeSwitch(pnlMisc, "Enable Anti-AFK", false, function(on)
+makeToggle(pnlAntiAFK, "Enable Anti-AFK", function(on)
     if on then
         AntiAFK.Start()
     else
