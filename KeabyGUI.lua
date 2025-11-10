@@ -24,6 +24,8 @@ local TeleportToPlayer = loadstring(game:HttpGet("https://raw.githubusercontent.
 local AutoSell = loadstring(game:HttpGet("https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/ShopFeatures/AutoSell.lua"))()
 local AutoSellTimer = loadstring(game:HttpGet("https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/ShopFeatures/AutoSellTimer.lua"))()
 local AntiAFK = loadstring(game:HttpGet("https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/Misc/AntiAFK.lua"))()
+local UnlockFPS = loadstring(game:HttpGet("https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/Misc/UnlockFPS.lua"))()
+
 
 
 -- Ultra Modern Cyberpunk Palette
@@ -1073,6 +1075,28 @@ makeToggle(pnlAntiAFK, "Enable Anti-AFK", function(on)
         AntiAFK.Start()
     else
         AntiAFK.Stop()
+    end
+end)
+
+local pnlFPS = makePanel(settingsPage, "⚡ FPS Unlocker", "Atur batas frame rate untuk gameplay yang lebih halus")
+-- toggle utama
+makeToggle(pnlFPS, "Enable Unlock FPS", function(on)
+    if on then
+        UnlockFPS.Start()
+    else
+        UnlockFPS.Stop()
+    end
+end)
+
+-- dropdown untuk memilih FPS cap
+makeDropdown(pnlFPS, "FPS Limit", {"60 FPS", "90 FPS", "120 FPS", "240 FPS"}, "60 FPS", function(selected)
+    local fpsValue = tonumber(string.match(selected, "%d+"))
+    if fpsValue then
+        UnlockFPS.CurrentCap = fpsValue
+        print("🎛️ FPS cap diubah menjadi:", fpsValue)
+        if UnlockFPS.Enabled then
+            UnlockFPS.SetCap(fpsValue)
+        end
     end
 end)
 
