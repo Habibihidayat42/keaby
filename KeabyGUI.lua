@@ -348,6 +348,7 @@ local function createPage(name)
 end
 
 local mainPage = createPage("Main")
+local teleportPage = createPage("Teleport")
 local settingsPage = createPage("Settings")
 local infoPage = createPage("Info")
 mainPage.Visible = true
@@ -371,10 +372,12 @@ local function switchPage(pageName)
 end
 
 local btnMain = createNavButton("Main", "🏠", "Main")
+local btnTeleport = createNavButton("Teleport", "🌍", "Teleport")
 local btnSettings = createNavButton("Settings", "⚙️", "Settings")
 local btnInfo = createNavButton("Info", "ℹ️", "Info")
 
 btnMain.MouseButton1Click:Connect(function() switchPage("Main") end)
+btnTeleport.MouseButton1Click:Connect(function() switchPage("Teleport") end)
 btnSettings.MouseButton1Click:Connect(function() switchPage("Settings") end)
 btnInfo.MouseButton1Click:Connect(function() switchPage("Info") end)
 
@@ -598,12 +601,8 @@ makeToggle(pnl2,"Enable Instant 2x Speed",function(on) if on then instant2x.Star
 makeSlider(pnl2,"Fishing Delay",0,5.0,0.3,function(v) instant2x.Settings.FishingDelay=v end)
 makeSlider(pnl2,"Cancel Delay",0.01,1.5,0.19,function(v) instant2x.Settings.CancelDelay=v end)
 
--- 🌍 Teleport Tab
-local teleportPage = makePage("🌍 Teleport", "Teleport Locations")
-
 -- Panel utama untuk daftar lokasi
 local pnlTeleport = makePanel(teleportPage, "Select Location", "")
-
 for name, _ in pairs(TeleportModule.Locations) do
     local btn = Instance.new("TextButton")
     btn.Parent = pnlTeleport
@@ -644,7 +643,6 @@ for name, _ in pairs(TeleportModule.Locations) do
         TeleportModule.TeleportTo(name)
     end)
 end
-
 
 -- Settings Page
 local settingsPnl = makePanel(settingsPage,"⚙️ General Settings","")
