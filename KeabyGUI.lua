@@ -967,6 +967,74 @@ makeButton(pnlSell, "Sell All", function()
 	end
 end)
 
+-- 💡 Compact Switch Button (Keaby style)
+local function makeSwitch(parent, label, default, callback)
+    local frame = new("Frame", {
+        Parent = parent,
+        Size = UDim2.new(0.96, 0, 0, 40),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+    })
+
+    new("TextLabel", {
+        Parent = frame,
+        Size = UDim2.new(0.7, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Text = label,
+        Font = Enum.Font.GothamBold,
+        TextSize = 13,
+        TextColor3 = colors.text,
+        TextXAlignment = Enum.TextXAlignment.Left,
+    })
+
+    local switch = new("Frame", {
+        Parent = frame,
+        AnchorPoint = Vector2.new(1, 0.5),
+        Position = UDim2.new(1, -5, 0.5, 0),
+        Size = UDim2.new(0, 46, 0, 24),
+        BackgroundColor3 = default and colors.primary or Color3.fromRGB(60, 60, 60),
+        BorderSizePixel = 0,
+    })
+    new("UICorner", { Parent = switch, CornerRadius = UDim.new(1, 0) })
+
+    local knob = new("Frame", {
+        Parent = switch,
+        Size = UDim2.new(0, 20, 0, 20),
+        Position = default and UDim2.new(1, -22, 0.5, 0) or UDim2.new(0, 2, 0.5, 0),
+        AnchorPoint = Vector2.new(0, 0.5),
+        BackgroundColor3 = Color3.fromRGB(220, 220, 220),
+        BorderSizePixel = 0,
+    })
+    new("UICorner", { Parent = knob, CornerRadius = UDim.new(1, 0) })
+
+    local state = default
+
+    local function setState(on)
+        state = on
+        TweenService:Create(switch, TweenInfo.new(0.2), {
+            BackgroundColor3 = on and colors.primary or Color3.fromRGB(60, 60, 60)
+        }):Play()
+        TweenService:Create(knob, TweenInfo.new(0.2), {
+            Position = on and UDim2.new(1, -22, 0.5, 0) or UDim2.new(0, 2, 0.5, 0)
+        }):Play()
+
+        pcall(function() callback(on) end)
+    end
+
+    local button = new("TextButton", {
+        Parent = switch,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Text = ""
+    })
+
+    button.MouseButton1Click:Connect(function()
+        setState(not state)
+    end)
+
+    return frame
+end
+
 -- === PANEL ===
 local pnlTimer = makePanel(shopPage, "⏰ Auto Sell Timer", "")
 
