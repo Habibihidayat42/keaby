@@ -45,4 +45,6 @@ function AutoSell.SellOnce()
 	end)
 end
 
+_G.AutoSell = AutoSell
 return AutoSell
+
