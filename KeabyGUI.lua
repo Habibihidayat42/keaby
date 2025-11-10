@@ -967,16 +967,29 @@ makeButton(pnlSell, "Sell All", function()
 	end
 end)
 
+-- === PANEL ===
 local pnlTimer = makePanel(shopPage, "⏰ Auto Sell Timer", "")
-makeSlider(pnlTimer, "Interval (detik)", 1, 60, 5, function(v)
-	AutoSellTimer.SetInterval(v)
+
+-- === SLIDER UNTUK INTERVAL ===
+makeSlider(pnlTimer, "Sell Interval (detik)", 1, 60, 5, function(value)
+	AutoSellTimer.SetInterval(value)
 end)
 
-makeToggle(pnlTimer, "Enable Auto Sell Timer", function(on)
-	if on then
+-- === TOMBOL START ===
+makeButton(pnlTimer, "Start Auto Sell", function()
+	if AutoSellTimer then
 		AutoSellTimer.Start(AutoSellTimer.Interval)
 	else
+		warn("❌ AutoSellTimer belum dimuat!")
+	end
+end)
+
+-- === TOMBOL STOP ===
+makeButton(pnlTimer, "Stop Auto Sell", function()
+	if AutoSellTimer then
 		AutoSellTimer.Stop()
+	else
+		warn("❌ AutoSellTimer belum dimuat!")
 	end
 end)
 
