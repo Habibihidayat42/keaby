@@ -897,8 +897,66 @@ Players.PlayerRemoving:Connect(function()
     refreshPlayerList()
 end)
 
--- === AUTO SELL BUTTON ===
+-- === AUTO SELL BUTTON SECTION ===
+
+-- 🧩 Compact Button (consistent with Keaby style)
+local function makeButton(parent, label, callback)
+    local btnFrame = new("Frame", {
+        Parent = parent,
+        Size = UDim2.new(0.96, 0, 0, 40),
+        BackgroundColor3 = colors.darker,
+        BackgroundTransparency = 0.25,
+        BorderSizePixel = 0,
+        ZIndex = 7
+    })
+    new("UICorner", { Parent = btnFrame, CornerRadius = UDim.new(0, 10) })
+    new("UIStroke", { Parent = btnFrame, Color = colors.border, Thickness = 1.2, Transparency = 0.6 })
+
+    local button = new("TextButton", {
+        Parent = btnFrame,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Text = label,
+        Font = Enum.Font.GothamBold,
+        TextSize = 13,
+        TextColor3 = colors.text,
+        AutoButtonColor = false,
+        ZIndex = 8
+    })
+
+    -- Hover effect
+    button.MouseEnter:Connect(function()
+        TweenService:Create(btnFrame, TweenInfo.new(0.15), {
+            BackgroundTransparency = 0,
+            BackgroundColor3 = colors.primary
+        }):Play()
+        TweenService:Create(button, TweenInfo.new(0.15), {
+            TextColor3 = colors.dark
+        }):Play()
+    end)
+    button.MouseLeave:Connect(function()
+        TweenService:Create(btnFrame, TweenInfo.new(0.15), {
+            BackgroundTransparency = 0.25,
+            BackgroundColor3 = colors.darker
+        }):Play()
+        TweenService:Create(button, TweenInfo.new(0.15), {
+            TextColor3 = colors.text
+        }):Play()
+    end)
+
+    button.MouseButton1Click:Connect(function()
+        pcall(function()
+            callback()
+        end)
+    end)
+
+    return btnFrame
+end
+
+
+-- === SHOP PANEL & BUTTON ===
 local pnlSell = makePanel(shopPage, "💰 Auto Sell System", "")
+
 makeButton(pnlSell, "Sell All", function()
 	if AutoSell and AutoSell.SellOnce then
 		print("🟢 [GUI] Sell All button pressed")
