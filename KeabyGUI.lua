@@ -1083,12 +1083,17 @@ local pnlFPS = makePanel(settingsPage, "🎞️ FPS Unlocker", "")
 makeDropdown(pnlFPS, "Select FPS Limit", "⚙️", {"60 FPS", "90 FPS", "120 FPS", "240 FPS"}, function(selected)
     local fpsValue = tonumber(selected:match("%d+"))
     if fpsValue then
-        UnlockFPS.SetFPS(fpsValue)
-        print("[KeabyGUI] FPS Limit set to:", fpsValue)
+        if UnlockFPS and UnlockFPS.SetCap then
+            UnlockFPS.SetCap(fpsValue)
+            print("[KeabyGUI] FPS cap set to:", fpsValue)
+        else
+            warn("[KeabyGUI] ⚠️ UnlockFPS module not loaded or missing SetCap()")
+        end
     else
-        print("[KeabyGUI] Invalid FPS selection:", selected)
+        warn("[KeabyGUI] Invalid FPS selection:", selected)
     end
 end, "FPSDropdown")
+
 
 
 makeToggle(settingsPnl,"Auto Save Settings",function(on) print("Auto Save:",on) end)
