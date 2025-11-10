@@ -1,34 +1,48 @@
 -- FungsiKeaby/AutoSell.lua
-local AutoSell = {}
-local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
+local AutoSell = {}
 
-local connection
-local enabled = false
+local function findSellRemotes()
+	local sellRemotes = {}
+	local keywords = { "sell", "vendor", "trade", "shop", "merchant", "salvage", "exchange", "deposit", "convert" }
 
-function AutoSell.Start()
-	if enabled then return end
-	enabled = true
-	print("[🛒 AutoSell] Started")
-
-	connection = RunService.Heartbeat:Connect(function()
-		pcall(function()
-			-- contoh event jual
-			local sellEvent = ReplicatedStorage:FindFirstChild("RE_SellFish") or ReplicatedStorage:FindFirstChild("SellEvent")
-			if sellEvent then
-				sellEvent:FireServer()
+	for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
+		if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
+			local name = string.lower(obj.Name)
+			for _, key in ipairs(keywords) do
+				if string.find(name, key) then
+					table.insert(sellRemotes, obj)
+					if string.find(name, "sellall") then
+						print("🎯 Found SellAll Remote:", obj:GetFullName())
+						return obj
+					end
+				end
 			end
-		end)
-	end)
+		end
+	end
+	return sellRemotes[1]
 end
 
-function AutoSell.Stop()
-	if not enabled then return end
-	enabled = false
-	if connection then connection:Disconnect() end
-	print("[🛒 AutoSell] Stopped")
+function AutoSell.SellOnce()
+	print("💸 Attempting to sell all fish...")
+
+	local remote = findSellRemotes()
+	if not remote then
+		warn("❌ Sell remote not found!")
+		return
+	end
+
+	pcall(function()
+		if remote:IsA("RemoteEvent") then
+			remote:FireServer("all")
+			print("✅ Sold via RemoteEvent:", remote.Name)
+		elseif remote:IsA("RemoteFunction") then
+			remote:InvokeServer("all")
+			print("✅ Sold via RemoteFunction:", remote.Name)
+		else
+			warn("⚠️ Invalid remote type for selling")
+		end
+	end)
 end
 
 return AutoSell
