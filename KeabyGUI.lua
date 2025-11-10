@@ -589,34 +589,65 @@ local function makePanel(parent,title,icon)
     return container
 end
 
--- DROPDOWN FUNCTION
-local function makeDropdown(parent, title, icon, items, onSelect)
+-- IMPROVED DROPDOWN FUNCTION
+local function makeDropdown(parent, title, icon, items, onSelect, uniqueId)
     local dropdownFrame = new("Frame", {
         Parent = parent,
-        Size = UDim2.new(0.96, 0, 0, 40),
+        Size = UDim2.new(0.96, 0, 0, 44),
         BackgroundColor3 = colors.glass,
-        BackgroundTransparency = 0.3,
+        BackgroundTransparency = 0.25,
         BorderSizePixel = 0,
         AutomaticSize = Enum.AutomaticSize.Y,
-        ZIndex = 6
+        ZIndex = 6,
+        Name = uniqueId or "Dropdown"
     })
-    new("UICorner", {Parent = dropdownFrame, CornerRadius = UDim.new(0, 12)})
-    new("UIStroke", {Parent = dropdownFrame, Color = colors.primary, Thickness = 1.2, Transparency = 0.6})
+    new("UICorner", {Parent = dropdownFrame, CornerRadius = UDim.new(0, 14)})
+    
+    local dropStroke = new("UIStroke", {
+        Parent = dropdownFrame, 
+        Color = colors.primary, 
+        Thickness = 1.5, 
+        Transparency = 0.5
+    })
+    
+    -- Gradient background
+    local dropGradient = new("UIGradient", {
+        Parent = dropdownFrame,
+        Color = ColorSequence.new{
+            ColorSequenceKeypoint.new(0, colors.glass),
+            ColorSequenceKeypoint.new(1, colors.darker)
+        },
+        Rotation = 45,
+        Transparency = NumberSequence.new(0.3)
+    })
     
     local header = new("TextButton", {
         Parent = dropdownFrame,
-        Size = UDim2.new(1, -16, 0, 35),
-        Position = UDim2.new(0, 8, 0, 0),
+        Size = UDim2.new(1, -16, 0, 38),
+        Position = UDim2.new(0, 8, 0, 3),
         BackgroundTransparency = 1,
         Text = "",
         AutoButtonColor = false,
         ZIndex = 7
     })
     
+    local iconLabel = new("TextLabel", {
+        Parent = header,
+        Text = icon,
+        Size = UDim2.new(0, 24, 1, 0),
+        BackgroundTransparency = 1,
+        Font = Enum.Font.GothamBold,
+        TextSize = 14,
+        TextColor3 = colors.primary,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 8
+    })
+    
     local headerLabel = new("TextLabel", {
         Parent = header,
-        Text = icon .. " " .. title,
-        Size = UDim2.new(1, -25, 1, 0),
+        Text = title,
+        Size = UDim2.new(1, -50, 1, 0),
+        Position = UDim2.new(0, 28, 0, 0),
         BackgroundTransparency = 1,
         Font = Enum.Font.GothamBold,
         TextSize = 11,
@@ -632,73 +663,179 @@ local function makeDropdown(parent, title, icon, items, onSelect)
         Position = UDim2.new(1, -20, 0, 0),
         BackgroundTransparency = 1,
         Font = Enum.Font.GothamBold,
-        TextSize = 10,
+        TextSize = 11,
         TextColor3 = colors.primary,
         ZIndex = 8
     })
     
-    local listContainer = new("Frame", {
+    local listContainer = new("ScrollingFrame", {
         Parent = dropdownFrame,
         Size = UDim2.new(1, -16, 0, 0),
-        Position = UDim2.new(0, 8, 0, 40),
+        Position = UDim2.new(0, 8, 0, 46),
         BackgroundTransparency = 1,
         Visible = false,
-        AutomaticSize = Enum.AutomaticSize.Y,
-        ClipsDescendants = false,
-        ZIndex = 7
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        ScrollBarThickness = 3,
+        ScrollBarImageColor3 = colors.primary,
+        BorderSizePixel = 0,
+        ClipsDescendants = true,
+        ZIndex = 10
     })
-    new("UIListLayout", {Parent = listContainer, Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder})
+    new("UIListLayout", {Parent = listContainer, Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder})
     new("UIPadding", {Parent = listContainer, PaddingBottom = UDim.new(0, 8)})
     
     local isOpen = false
+    local selectedItem = nil
     
     header.MouseButton1Click:Connect(function()
         isOpen = not isOpen
         listContainer.Visible = isOpen
-        arrow.Text = isOpen and "▲" or "▼"
-        TweenService:Create(arrow, TweenInfo.new(0.2), {Rotation = isOpen and 180 or 0}):Play()
+        
+        -- Animate arrow
+        TweenService:Create(arrow, TweenInfo.new(0.25, Enum.EasingStyle.Back), {
+            Rotation = isOpen and 180 or 0
+        }):Play()
+        
+        -- Animate dropdown
+        TweenService:Create(dropStroke, TweenInfo.new(0.2), {
+            Color = isOpen and colors.success or colors.primary,
+            Thickness = isOpen and 2 or 1.5,
+            Transparency = isOpen and 0.3 or 0.5
+        }):Play()
+        
+        -- Limit height for scrolling
+        if isOpen and #items > 6 then
+            listContainer.Size = UDim2.new(1, -16, 0, 180)
+        else
+            listContainer.Size = UDim2.new(1, -16, 0, math.min(#items * 35, 210))
+        end
     end)
     
-    for _, itemName in ipairs(items) do
-        local itemBtn = new("TextButton", {
-            Parent = listContainer,
-            Size = UDim2.new(1, 0, 0, 30),
-            BackgroundColor3 = colors.darker,
-            BackgroundTransparency = 0.4,
-            BorderSizePixel = 0,
-            Text = "• " .. itemName,
-            Font = Enum.Font.GothamMedium,
-            TextSize = 10,
-            TextColor3 = colors.textDim,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            AutoButtonColor = false,
-            ZIndex = 8
-        })
-        new("UICorner", {Parent = itemBtn, CornerRadius = UDim.new(0, 8)})
-        new("UIStroke", {Parent = itemBtn, Color = colors.border, Thickness = 1, Transparency = 0.7})
-        new("UIPadding", {Parent = itemBtn, PaddingLeft = UDim.new(0, 10)})
-        
-        itemBtn.MouseEnter:Connect(function()
-            TweenService:Create(itemBtn, TweenInfo.new(0.15), {
-                BackgroundColor3 = colors.primary,
-                BackgroundTransparency = 0.2,
-                TextColor3 = colors.text
-            }):Play()
-        end)
-        itemBtn.MouseLeave:Connect(function()
-            TweenService:Create(itemBtn, TweenInfo.new(0.15), {
+    local itemButtons = {}
+    
+    local function resetAllButtons()
+        for _, btn in pairs(itemButtons) do
+            TweenService:Create(btn, TweenInfo.new(0.2), {
                 BackgroundColor3 = colors.darker,
                 BackgroundTransparency = 0.4,
                 TextColor3 = colors.textDim
             }):Play()
+            if btn:FindFirstChild("UIStroke") then
+                btn.UIStroke.Color = colors.border
+                btn.UIStroke.Transparency = 0.7
+            end
+        end
+    end
+    
+    for _, itemName in ipairs(items) do
+        local itemBtn = new("TextButton", {
+            Parent = listContainer,
+            Size = UDim2.new(1, 0, 0, 32),
+            BackgroundColor3 = colors.darker,
+            BackgroundTransparency = 0.4,
+            BorderSizePixel = 0,
+            Text = "",
+            AutoButtonColor = false,
+            ZIndex = 11
+        })
+        new("UICorner", {Parent = itemBtn, CornerRadius = UDim.new(0, 9)})
+        
+        local btnStroke = new("UIStroke", {
+            Parent = itemBtn, 
+            Color = colors.border, 
+            Thickness = 1.2, 
+            Transparency = 0.7
+        })
+        
+        local btnIcon = new("TextLabel", {
+            Parent = itemBtn,
+            Text = "◆",
+            Size = UDim2.new(0, 20, 1, 0),
+            Position = UDim2.new(0, 8, 0, 0),
+            BackgroundTransparency = 1,
+            Font = Enum.Font.GothamBold,
+            TextSize = 9,
+            TextColor3 = colors.primary,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = 12
+        })
+        
+        local btnLabel = new("TextLabel", {
+            Parent = itemBtn,
+            Text = itemName,
+            Size = UDim2.new(1, -35, 1, 0),
+            Position = UDim2.new(0, 28, 0, 0),
+            BackgroundTransparency = 1,
+            Font = Enum.Font.GothamMedium,
+            TextSize = 10,
+            TextColor3 = colors.textDim,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = 12
+        })
+        
+        table.insert(itemButtons, itemBtn)
+        
+        itemBtn.MouseEnter:Connect(function()
+            if selectedItem ~= itemName then
+                TweenService:Create(itemBtn, TweenInfo.new(0.15), {
+                    BackgroundColor3 = colors.primary,
+                    BackgroundTransparency = 0.15,
+                }):Play()
+                TweenService:Create(btnLabel, TweenInfo.new(0.15), {
+                    TextColor3 = colors.text
+                }):Play()
+                TweenService:Create(btnIcon, TweenInfo.new(0.15), {
+                    TextColor3 = colors.text
+                }):Play()
+                TweenService:Create(btnStroke, TweenInfo.new(0.15), {
+                    Color = colors.primary,
+                    Transparency = 0.4
+                }):Play()
+            end
         end)
+        
+        itemBtn.MouseLeave:Connect(function()
+            if selectedItem ~= itemName then
+                TweenService:Create(itemBtn, TweenInfo.new(0.15), {
+                    BackgroundColor3 = colors.darker,
+                    BackgroundTransparency = 0.4,
+                }):Play()
+                TweenService:Create(btnLabel, TweenInfo.new(0.15), {
+                    TextColor3 = colors.textDim
+                }):Play()
+                TweenService:Create(btnIcon, TweenInfo.new(0.15), {
+                    TextColor3 = colors.primary
+                }):Play()
+                TweenService:Create(btnStroke, TweenInfo.new(0.15), {
+                    Color = colors.border,
+                    Transparency = 0.7
+                }):Play()
+            end
+        end)
+        
         itemBtn.MouseButton1Click:Connect(function()
+            resetAllButtons()
+            selectedItem = itemName
             onSelect(itemName)
+            
+            -- Close dropdown after selection
+            task.wait(0.1)
             isOpen = false
             listContainer.Visible = false
-            arrow.Text = "▼"
+            TweenService:Create(arrow, TweenInfo.new(0.25, Enum.EasingStyle.Back), {
+                Rotation = 0
+            }):Play()
+            TweenService:Create(dropStroke, TweenInfo.new(0.2), {
+                Color = colors.primary,
+                Thickness = 1.5,
+                Transparency = 0.5
+            }):Play()
         end)
     end
+    
+    return dropdownFrame
 end
 
 -- Main Page Content
@@ -755,17 +892,6 @@ end)
 Players.PlayerRemoving:Connect(function()
     refreshPlayerList()
 end)
-
--- Update Teleport dropdown dynamically
-makeDropdown(teleportPage, "Teleport to Player", "👤", playerItems, function(selectedPlayer)
-    if TeleportToPlayer and TeleportToPlayer.TeleportTo then
-        TeleportToPlayer.TeleportTo(selectedPlayer)
-        print("[KeabyGUI] Teleporting to player: " .. selectedPlayer)
-    else
-        warn("[KeabyGUI] ⚠️ TeleportToPlayer module not found or missing TeleportTo() function")
-    end
-end)
-
 
 -- Settings Page
 local settingsPnl = makePanel(settingsPage,"⚙️ General Settings","")
