@@ -19,6 +19,8 @@ end
 
 local instant = loadstring(game:HttpGet("https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/Instant.lua"))()
 local instant2x = loadstring(game:HttpGet("https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/Instant2Xspeed.lua"))()
+local TeleportModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/TeleportModule.lua"))()
+
 
 -- Ultra Modern Cyberpunk Palette
 local colors = {
@@ -595,6 +597,54 @@ local pnl2=makePanel(mainPage,"🚀 Instant 2x Speed","")
 makeToggle(pnl2,"Enable Instant 2x Speed",function(on) if on then instant2x.Start() else instant2x.Stop() end end)
 makeSlider(pnl2,"Fishing Delay",0,5.0,0.3,function(v) instant2x.Settings.FishingDelay=v end)
 makeSlider(pnl2,"Cancel Delay",0.01,1.5,0.19,function(v) instant2x.Settings.CancelDelay=v end)
+
+-- 🌍 Teleport Tab
+local teleportPage = makePage("🌍 Teleport", "Teleport Locations")
+
+-- Panel utama untuk daftar lokasi
+local pnlTeleport = makePanel(teleportPage, "Select Location", "")
+
+for name, _ in pairs(TeleportModule.Locations) do
+    local btn = Instance.new("TextButton")
+    btn.Parent = pnlTeleport
+    btn.Size = UDim2.new(1, -10, 0, 36)
+    btn.BackgroundColor3 = colors.glass
+    btn.BackgroundTransparency = 0.25
+    btn.BorderSizePixel = 0
+    btn.Text = "📍 " .. name
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 13
+    btn.TextColor3 = colors.text
+    btn.AutoButtonColor = false
+    btn.ZIndex = 8
+
+    local stroke = Instance.new("UIStroke", btn)
+    stroke.Color = colors.primary
+    stroke.Thickness = 1.4
+    stroke.Transparency = 0.4
+
+    local corner = Instance.new("UICorner", btn)
+    corner.CornerRadius = UDim.new(0, 10)
+
+    btn.MouseEnter:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.15), {
+            BackgroundColor3 = colors.primary,
+            BackgroundTransparency = 0.1,
+            TextColor3 = colors.dark
+        }):Play()
+    end)
+    btn.MouseLeave:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.15), {
+            BackgroundColor3 = colors.glass,
+            BackgroundTransparency = 0.25,
+            TextColor3 = colors.text
+        }):Play()
+    end)
+    btn.MouseButton1Click:Connect(function()
+        TeleportModule.TeleportTo(name)
+    end)
+end
+
 
 -- Settings Page
 local settingsPnl = makePanel(settingsPage,"⚙️ General Settings","")
