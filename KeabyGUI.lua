@@ -897,12 +897,16 @@ Players.PlayerRemoving:Connect(function()
     refreshPlayerList()
 end)
 
--- Auto Sell Panel
+-- === AUTO SELL BUTTON ===
 local pnlSell = makePanel(shopPage, "💰 Auto Sell System", "")
 makeButton(pnlSell, "Sell All", function()
-	AutoSell.SellOnce()
+	if AutoSell and AutoSell.SellOnce then
+		print("🟢 [GUI] Sell All button pressed")
+		AutoSell.SellOnce()
+	else
+		warn("❌ AutoSell module not loaded or missing SellOnce()")
+	end
 end)
-
 
 -- Settings Page
 local settingsPnl = makePanel(settingsPage,"⚙️ General Settings","")
