@@ -602,140 +602,138 @@ makeToggle(pnl2,"Enable Instant 2x Speed",function(on) if on then instant2x.Star
 makeSlider(pnl2,"Fishing Delay",0,5.0,0.3,function(v) instant2x.Settings.FishingDelay=v end)
 makeSlider(pnl2,"Cancel Delay",0.01,1.5,0.19,function(v) instant2x.Settings.CancelDelay=v end)
 
--- Panel utama untuk daftar lokasi
+-- Panel utama
 local pnlTeleport = makePanel(teleportPage, "🌍 Teleport System", "")
+pnlTeleport.AutomaticCanvasSize = Enum.AutomaticSize.None
+pnlTeleport.CanvasSize = UDim2.new(0, 0, 0, 0)
+pnlTeleport.ScrollBarThickness = 6
 
--- Fungsi pembuat dropdown stylish (FIXED)
-local function makeDropdown(parent, title, items, onSelect)
-    local container = Instance.new("Frame")
-    container.Parent = parent
-    container.Size = UDim2.new(1, -10, 0, 42)
-    container.BackgroundColor3 = colors.glass
-    container.BackgroundTransparency = 0.25
-    container.BorderSizePixel = 0
-    container.ZIndex = 20
-    container.ClipsDescendants = false -- ✅ biar dropdown bisa keluar area panel
+-- === Lokasi Tetap ===
+local lbl1 = Instance.new("TextLabel")
+lbl1.Parent = pnlTeleport
+lbl1.Size = UDim2.new(1, -10, 0, 24)
+lbl1.BackgroundTransparency = 1
+lbl1.Text = "📌 Teleport Location"
+lbl1.Font = Enum.Font.GothamBold
+lbl1.TextSize = 14
+lbl1.TextColor3 = colors.primary
+lbl1.TextXAlignment = Enum.TextXAlignment.Left
+lbl1.ZIndex = 10
 
-    local stroke = Instance.new("UIStroke", container)
+for name, _ in pairs(TeleportModule.Locations) do
+    local btn = Instance.new("TextButton")
+    btn.Parent = pnlTeleport
+    btn.Size = UDim2.new(1, -10, 0, 36)
+    btn.BackgroundColor3 = colors.glass
+    btn.BackgroundTransparency = 0.25
+    btn.BorderSizePixel = 0
+    btn.Text = "📍 " .. name
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 13
+    btn.TextColor3 = colors.text
+    btn.ZIndex = 8
+    btn.AutoButtonColor = false
+
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
+    local stroke = Instance.new("UIStroke", btn)
     stroke.Color = colors.primary
     stroke.Thickness = 1.4
     stroke.Transparency = 0.4
 
-    local corner = Instance.new("UICorner", container)
-    corner.CornerRadius = UDim.new(0, 10)
-
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Parent = container
-    titleLabel.Size = UDim2.new(1, -36, 1, 0)
-    titleLabel.Position = UDim2.new(0, 10, 0, 0)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Text = "▼ " .. title
-    titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.TextSize = 13
-    titleLabel.TextColor3 = colors.text
-    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    titleLabel.ZIndex = 21
-
-    local toggleBtn = Instance.new("TextButton")
-    toggleBtn.Parent = container
-    toggleBtn.Size = UDim2.new(1, 0, 1, 0)
-    toggleBtn.BackgroundTransparency = 1
-    toggleBtn.Text = ""
-    toggleBtn.ZIndex = 22
-
-    -- ✅ Buat dropdown muncul langsung di GUI utama, bukan di dalam panel
-    local dropFrame = Instance.new("Frame")
-    dropFrame.Parent = gui
-    dropFrame.AnchorPoint = Vector2.new(0, 0)
-    dropFrame.Position = UDim2.new(0, container.AbsolutePosition.X, 0, container.AbsolutePosition.Y + container.AbsoluteSize.Y)
-    dropFrame.Size = UDim2.new(0, container.AbsoluteSize.X, 0, 0)
-    dropFrame.BackgroundColor3 = colors.darker
-    dropFrame.BackgroundTransparency = 0.15
-    dropFrame.BorderSizePixel = 0
-    dropFrame.Visible = false
-    dropFrame.ZIndex = 100 -- ✅ di atas semua elemen
-
-    local dropCorner = Instance.new("UICorner", dropFrame)
-    dropCorner.CornerRadius = UDim.new(0, 8)
-
-    local layout = Instance.new("UIListLayout", dropFrame)
-    layout.Padding = UDim.new(0, 6)
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-
-    -- Update posisi dropdown saat parent berpindah
-    container:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
-        dropFrame.Position = UDim2.new(0, container.AbsolutePosition.X, 0, container.AbsolutePosition.Y + container.AbsoluteSize.Y)
-        dropFrame.Size = UDim2.new(0, container.AbsoluteSize.X, dropFrame.Size.Y.Scale, dropFrame.Size.Y.Offset)
+    btn.MouseEnter:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.15), {
+            BackgroundColor3 = colors.primary,
+            BackgroundTransparency = 0.1,
+            TextColor3 = colors.dark
+        }):Play()
     end)
+    btn.MouseLeave:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.15), {
+            BackgroundColor3 = colors.glass,
+            BackgroundTransparency = 0.25,
+            TextColor3 = colors.text
+        }):Play()
+    end)
+    btn.MouseButton1Click:Connect(function()
+        TeleportModule.TeleportTo(name)
+    end)
+end
 
-    -- Animasi buka/tutup
-    local expanded = false
-    local function toggleDropdown()
-        expanded = not expanded
-        titleLabel.Text = (expanded and "▲ " or "▼ ") .. title
-        dropFrame.Visible = expanded
-        local newHeight = expanded and (#items * 36 + 10) or 0
-        TweenService:Create(dropFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Size = UDim2.new(0, container.AbsoluteSize.X, 0, newHeight)}):Play()
+-- === Pemisah antara lokasi & player ===
+local line = Instance.new("Frame")
+line.Parent = pnlTeleport
+line.Size = UDim2.new(1, -10, 0, 2)
+line.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+line.BorderSizePixel = 0
+line.ZIndex = 8
+
+-- === Teleport ke Player ===
+local lbl2 = Instance.new("TextLabel")
+lbl2.Parent = pnlTeleport
+lbl2.Size = UDim2.new(1, -10, 0, 24)
+lbl2.BackgroundTransparency = 1
+lbl2.Text = "👥 Teleport to Player"
+lbl2.Font = Enum.Font.GothamBold
+lbl2.TextSize = 14
+lbl2.TextColor3 = colors.primary
+lbl2.TextXAlignment = Enum.TextXAlignment.Left
+lbl2.ZIndex = 10
+
+-- Scroll list player
+local playerList = Instance.new("ScrollingFrame")
+playerList.Parent = pnlTeleport
+playerList.Size = UDim2.new(1, -10, 0, 260)
+playerList.BackgroundTransparency = 1
+playerList.BorderSizePixel = 0
+playerList.AutomaticCanvasSize = Enum.AutomaticSize.Y
+playerList.CanvasSize = UDim2.new(0, 0, 0, 0)
+playerList.ScrollBarThickness = 5
+playerList.ZIndex = 8
+
+local layout = Instance.new("UIListLayout", playerList)
+layout.Padding = UDim.new(0, 6)
+layout.SortOrder = Enum.SortOrder.Name
+
+-- Tombol refresh
+local refreshBtn = Instance.new("TextButton")
+refreshBtn.Parent = pnlTeleport
+refreshBtn.Size = UDim2.new(1, -10, 0, 36)
+refreshBtn.Text = "🔄 Refresh Player List"
+refreshBtn.BackgroundColor3 = colors.primary
+refreshBtn.TextColor3 = colors.dark
+refreshBtn.Font = Enum.Font.GothamBold
+refreshBtn.TextSize = 13
+refreshBtn.ZIndex = 8
+Instance.new("UICorner", refreshBtn).CornerRadius = UDim.new(0, 10)
+
+local function populatePlayers()
+    for _, c in ipairs(playerList:GetChildren()) do
+        if c:IsA("TextButton") then c:Destroy() end
     end
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= localPlayer then
+            local btn = Instance.new("TextButton")
+            btn.Parent = playerList
+            btn.Size = UDim2.new(1, 0, 0, 30)
+            btn.BackgroundColor3 = colors.glass
+            btn.BackgroundTransparency = 0.3
+            btn.BorderSizePixel = 0
+            btn.Text = "📍 " .. plr.Name
+            btn.Font = Enum.Font.Gotham
+            btn.TextSize = 13
+            btn.TextColor3 = colors.text
+            btn.ZIndex = 8
+            Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
 
-    toggleBtn.MouseButton1Click:Connect(toggleDropdown)
-
-    -- Tutup dropdown kalau klik di luar
-    UserInputService.InputBegan:Connect(function(input, gpe)
-        if not gpe and expanded and input.UserInputType == Enum.UserInputType.MouseButton1 then
-            local mousePos = input.Position
-            local guiPos = dropFrame.AbsolutePosition
-            local guiSize = dropFrame.AbsoluteSize
-            if not (mousePos.X > guiPos.X and mousePos.X < guiPos.X + guiSize.X and mousePos.Y > guiPos.Y and mousePos.Y < guiPos.Y + guiSize.Y) then
-                toggleDropdown()
-            end
+            btn.MouseButton1Click:Connect(function()
+                TeleportToPlayer.Teleport(plr.Name)
+            end)
         end
-    end)
-
-    -- Tombol pilihan dropdown
-    for _, itemName in ipairs(items) do
-        local btn = Instance.new("TextButton")
-        btn.Parent = dropFrame
-        btn.Size = UDim2.new(1, -10, 0, 32)
-        btn.BackgroundColor3 = colors.glass
-        btn.BackgroundTransparency = 0.3
-        btn.BorderSizePixel = 0
-        btn.Text = "📍 " .. itemName
-        btn.Font = Enum.Font.Gotham
-        btn.TextSize = 12
-        btn.TextColor3 = colors.text
-        btn.AutoButtonColor = false
-        btn.ZIndex = 101
-
-        local stroke2 = Instance.new("UIStroke", btn)
-        stroke2.Color = colors.primary
-        stroke2.Thickness = 1.2
-        stroke2.Transparency = 0.5
-
-        local corner2 = Instance.new("UICorner", btn)
-        corner2.CornerRadius = UDim.new(0, 8)
-
-        btn.MouseEnter:Connect(function()
-            TweenService:Create(btn, TweenInfo.new(0.15), {
-                BackgroundColor3 = colors.primary,
-                BackgroundTransparency = 0.05,
-                TextColor3 = colors.dark
-            }):Play()
-        end)
-        btn.MouseLeave:Connect(function()
-            TweenService:Create(btn, TweenInfo.new(0.15), {
-                BackgroundColor3 = colors.glass,
-                BackgroundTransparency = 0.3,
-                TextColor3 = colors.text
-            }):Play()
-        end)
-        btn.MouseButton1Click:Connect(function()
-            onSelect(itemName)
-            toggleDropdown()
-        end)
     end
 end
 
+refreshBtn.MouseButton1Click:Connect(populatePlayers)
+populatePlayers()
 
 -- 1️⃣ Dropdown untuk lokasi teleport
 local locationNames = {}
