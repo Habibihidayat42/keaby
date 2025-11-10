@@ -737,6 +737,36 @@ makeDropdown(teleportPage, "Teleport to Player", "👤", playerItems, function(s
     print("Teleporting to player: " .. selectedPlayer)
 end)
 
+-- === Dynamic Update for Player Dropdown ===
+local function refreshPlayerList()
+    table.clear(playerItems)
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= localPlayer then
+            table.insert(playerItems, player.Name)
+        end
+    end
+    table.sort(playerItems)
+end
+
+-- Refresh list when player joins or leaves
+Players.PlayerAdded:Connect(function()
+    refreshPlayerList()
+end)
+Players.PlayerRemoving:Connect(function()
+    refreshPlayerList()
+end)
+
+-- Update Teleport dropdown dynamically
+makeDropdown(teleportPage, "Teleport to Player", "👤", playerItems, function(selectedPlayer)
+    if TeleportToPlayer and TeleportToPlayer.TeleportTo then
+        TeleportToPlayer.TeleportTo(selectedPlayer)
+        print("[KeabyGUI] Teleporting to player: " .. selectedPlayer)
+    else
+        warn("[KeabyGUI] ⚠️ TeleportToPlayer module not found or missing TeleportTo() function")
+    end
+end)
+
+
 -- Settings Page
 local settingsPnl = makePanel(settingsPage,"⚙️ General Settings","")
 makeToggle(settingsPnl,"Auto Save Settings",function(on) print("Auto Save:",on) end)
