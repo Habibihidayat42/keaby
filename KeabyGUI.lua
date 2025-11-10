@@ -602,23 +602,14 @@ makeToggle(pnl2,"Enable Instant 2x Speed",function(on) if on then instant2x.Star
 makeSlider(pnl2,"Fishing Delay",0,5.0,0.3,function(v) instant2x.Settings.FishingDelay=v end)
 makeSlider(pnl2,"Cancel Delay",0.01,1.5,0.19,function(v) instant2x.Settings.CancelDelay=v end)
 
--- Panel utama
-local pnlTeleport = makePanel(teleportPage, "🌍 Teleport System", "")
-pnlTeleport.AutomaticCanvasSize = Enum.AutomaticSize.None
-pnlTeleport.CanvasSize = UDim2.new(0, 0, 0, 0)
-pnlTeleport.ScrollBarThickness = 6
+-- 🌍 Teleport Tab
+local teleportPage = createPage("Teleport")
 
--- === Lokasi Tetap ===
-local lbl1 = Instance.new("TextLabel")
-lbl1.Parent = pnlTeleport
-lbl1.Size = UDim2.new(1, -10, 0, 24)
-lbl1.BackgroundTransparency = 1
-lbl1.Text = "📌 Teleport Location"
-lbl1.Font = Enum.Font.GothamBold
-lbl1.TextSize = 14
-lbl1.TextColor3 = colors.primary
-lbl1.TextXAlignment = Enum.TextXAlignment.Left
-lbl1.ZIndex = 10
+local btnTeleport = createNavButton("Teleport", "🌍", "Teleport")
+btnTeleport.MouseButton1Click:Connect(function() switchPage("Teleport") end)
+
+-- Panel utama untuk daftar lokasi
+local pnlTeleport = makePanel(teleportPage, "Select Location", "")
 
 for name, _ in pairs(TeleportModule.Locations) do
     local btn = Instance.new("TextButton")
@@ -631,14 +622,16 @@ for name, _ in pairs(TeleportModule.Locations) do
     btn.Font = Enum.Font.GothamBold
     btn.TextSize = 13
     btn.TextColor3 = colors.text
-    btn.ZIndex = 8
     btn.AutoButtonColor = false
+    btn.ZIndex = 8
 
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
     local stroke = Instance.new("UIStroke", btn)
     stroke.Color = colors.primary
     stroke.Thickness = 1.4
     stroke.Transparency = 0.4
+
+    local corner = Instance.new("UICorner", btn)
+    corner.CornerRadius = UDim.new(0, 10)
 
     btn.MouseEnter:Connect(function()
         TweenService:Create(btn, TweenInfo.new(0.15), {
@@ -658,108 +651,6 @@ for name, _ in pairs(TeleportModule.Locations) do
         TeleportModule.TeleportTo(name)
     end)
 end
-
--- === Pemisah antara lokasi & player ===
-local line = Instance.new("Frame")
-line.Parent = pnlTeleport
-line.Size = UDim2.new(1, -10, 0, 2)
-line.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-line.BorderSizePixel = 0
-line.ZIndex = 8
-
--- === Teleport ke Player ===
-local lbl2 = Instance.new("TextLabel")
-lbl2.Parent = pnlTeleport
-lbl2.Size = UDim2.new(1, -10, 0, 24)
-lbl2.BackgroundTransparency = 1
-lbl2.Text = "👥 Teleport to Player"
-lbl2.Font = Enum.Font.GothamBold
-lbl2.TextSize = 14
-lbl2.TextColor3 = colors.primary
-lbl2.TextXAlignment = Enum.TextXAlignment.Left
-lbl2.ZIndex = 10
-
--- Scroll list player
-local playerList = Instance.new("ScrollingFrame")
-playerList.Parent = pnlTeleport
-playerList.Size = UDim2.new(1, -10, 0, 260)
-playerList.BackgroundTransparency = 1
-playerList.BorderSizePixel = 0
-playerList.AutomaticCanvasSize = Enum.AutomaticSize.Y
-playerList.CanvasSize = UDim2.new(0, 0, 0, 0)
-playerList.ScrollBarThickness = 5
-playerList.ZIndex = 8
-
-local layout = Instance.new("UIListLayout", playerList)
-layout.Padding = UDim.new(0, 6)
-layout.SortOrder = Enum.SortOrder.Name
-
--- Tombol refresh
-local refreshBtn = Instance.new("TextButton")
-refreshBtn.Parent = pnlTeleport
-refreshBtn.Size = UDim2.new(1, -10, 0, 36)
-refreshBtn.Text = "🔄 Refresh Player List"
-refreshBtn.BackgroundColor3 = colors.primary
-refreshBtn.TextColor3 = colors.dark
-refreshBtn.Font = Enum.Font.GothamBold
-refreshBtn.TextSize = 13
-refreshBtn.ZIndex = 8
-Instance.new("UICorner", refreshBtn).CornerRadius = UDim.new(0, 10)
-
-local function populatePlayers()
-    for _, c in ipairs(playerList:GetChildren()) do
-        if c:IsA("TextButton") then c:Destroy() end
-    end
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= localPlayer then
-            local btn = Instance.new("TextButton")
-            btn.Parent = playerList
-            btn.Size = UDim2.new(1, 0, 0, 30)
-            btn.BackgroundColor3 = colors.glass
-            btn.BackgroundTransparency = 0.3
-            btn.BorderSizePixel = 0
-            btn.Text = "📍 " .. plr.Name
-            btn.Font = Enum.Font.Gotham
-            btn.TextSize = 13
-            btn.TextColor3 = colors.text
-            btn.ZIndex = 8
-            Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
-
-            btn.MouseButton1Click:Connect(function()
-                TeleportToPlayer.Teleport(plr.Name)
-            end)
-        end
-    end
-end
-
-refreshBtn.MouseButton1Click:Connect(populatePlayers)
-populatePlayers()
-
--- 1️⃣ Dropdown untuk lokasi teleport
-local locationNames = {}
-for name, _ in pairs(TeleportModule.Locations) do
-    table.insert(locationNames, name)
-end
-table.sort(locationNames)
-makeDropdown(pnlTeleport, "Teleport Location", locationNames, function(name)
-    TeleportModule.TeleportTo(name)
-end)
-
--- 2️⃣ Dropdown untuk teleport ke player
-local function getPlayerNames()
-    local names = {}
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= localPlayer then
-            table.insert(names, plr.Name)
-        end
-    end
-    table.sort(names)
-    return names
-end
-
-makeDropdown(pnlTeleport, "Teleport to Player", getPlayerNames(), function(playerName)
-    TeleportToPlayer.Teleport(playerName)
-end)
 
 
 -- Settings Page
