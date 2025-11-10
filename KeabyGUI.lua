@@ -1,4 +1,4 @@
--- KeabyGUI_v4.0.lua - Ultra Modern Edition (FIXED)
+-- KeabyGUI_v4.0.lua - Ultra Modern Edition (MOBILE OPTIMIZED)
 -- Neon Cyberpunk Theme with Refined Design 🌟
 
 repeat task.wait() until game:IsLoaded()
@@ -21,7 +21,6 @@ local instant = loadstring(game:HttpGet("https://raw.githubusercontent.com/Habib
 local instant2x = loadstring(game:HttpGet("https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/Instant2Xspeed.lua"))()
 local TeleportModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/TeleportModule.lua"))()
 local TeleportToPlayer = loadstring(game:HttpGet("https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/TeleportSystem/TeleportToPlayer.lua"))()
-
 
 -- Ultra Modern Cyberpunk Palette
 local colors = {
@@ -71,23 +70,24 @@ local blurBg = new("Frame",{
     ZIndex=2
 })
 
+-- FIXED: Smaller window size for mobile (reduced from 700x450 to 520x380)
 local win = new("Frame",{
     Parent=gui,
-    Size=UDim2.new(0,700,0,450),
-    Position=UDim2.new(0.5,-350,0.5,-225),
+    Size=UDim2.new(0,520,0,380),
+    Position=UDim2.new(0.5,-260,0.5,-190),
     BackgroundColor3=colors.darkest,
     BackgroundTransparency=0.05,
     BorderSizePixel=0,
     ClipsDescendants=true,
     ZIndex=3
 })
-new("UICorner",{Parent=win,CornerRadius=UDim.new(0,20)})
+new("UICorner",{Parent=win,CornerRadius=UDim.new(0,16)})
 
--- Animated border only on the window
+-- Animated border
 local neonBorder = new("UIStroke",{
     Parent=win,
     Color=colors.primary,
-    Thickness=2.5,
+    Thickness=2,
     Transparency=0,
     ApplyStrokeMode=Enum.ApplyStrokeMode.Border
 })
@@ -113,32 +113,32 @@ task.spawn(function()
     end
 end)
 
--- Top Bar
+-- Top Bar (smaller)
 local topBar = new("Frame",{
     Parent=win,
-    Size=UDim2.new(1,0,0,60),
+    Size=UDim2.new(1,0,0,50),
     BackgroundColor3=colors.dark,
     BackgroundTransparency=0.1,
     BorderSizePixel=0,
     ZIndex=4
 })
-new("UICorner",{Parent=topBar,CornerRadius=UDim.new(0,20)})
+new("UICorner",{Parent=topBar,CornerRadius=UDim.new(0,16)})
 
--- Logo Container
+-- Logo Container (smaller)
 local logoContainer = new("Frame",{
     Parent=topBar,
-    Size=UDim2.new(0,45,0,45),
-    Position=UDim2.new(0,12,0.5,-22.5),
+    Size=UDim2.new(0,38,0,38),
+    Position=UDim2.new(0,10,0.5,-19),
     BackgroundColor3=colors.darkest,
     BorderSizePixel=0,
     ZIndex=5
 })
-new("UICorner",{Parent=logoContainer,CornerRadius=UDim.new(0,12)})
+new("UICorner",{Parent=logoContainer,CornerRadius=UDim.new(0,10)})
 
 local logoStroke = new("UIStroke",{
     Parent=logoContainer,
     Color=colors.primary,
-    Thickness=2,
+    Thickness=1.8,
     Transparency=0.3
 })
 
@@ -147,31 +147,31 @@ local logoText = new("TextLabel",{
     Text="K",
     Size=UDim2.new(1,0,1,0),
     Font=Enum.Font.GothamBold,
-    TextSize=28,
+    TextSize=22,
     BackgroundTransparency=1,
     TextColor3=colors.primary,
     ZIndex=6
 })
 
--- Title
+-- Title (smaller)
 local titleLabel = new("TextLabel",{
     Parent=topBar,
     Text="Keabyy",
-    Size=UDim2.new(0,200,1,0),
-    Position=UDim2.new(0,65,0,0),
+    Size=UDim2.new(0,150,1,0),
+    Position=UDim2.new(0,55,0,0),
     Font=Enum.Font.GothamBold,
-    TextSize=20,
+    TextSize=16,
     BackgroundTransparency=1,
     TextColor3=colors.text,
     TextXAlignment=Enum.TextXAlignment.Left,
     ZIndex=5
 })
 
--- Control Buttons
+-- Control Buttons (smaller)
 local controlsContainer = new("Frame",{
     Parent=topBar,
-    Size=UDim2.new(0,90,0,35),
-    Position=UDim2.new(1,-100,0.5,-17.5),
+    Size=UDim2.new(0,75,0,30),
+    Position=UDim2.new(1,-82,0.5,-15),
     BackgroundTransparency=1,
     ZIndex=5
 })
@@ -179,32 +179,32 @@ new("UIListLayout",{
     Parent=controlsContainer,
     FillDirection=Enum.FillDirection.Horizontal,
     HorizontalAlignment=Enum.HorizontalAlignment.Right,
-    Padding=UDim.new(0,8)
+    Padding=UDim.new(0,6)
 })
 
 local function createControlButton(icon, hoverColor)
     local btn = new("TextButton",{
         Parent=controlsContainer,
         Text=icon,
-        Size=UDim2.new(0,35,0,35),
+        Size=UDim2.new(0,30,0,30),
         BackgroundColor3=colors.glass,
         BackgroundTransparency=0.3,
         BorderSizePixel=0,
         Font=Enum.Font.GothamBold,
-        TextSize=icon == "×" and 24 or 18,
+        TextSize=icon == "×" and 20 or 16,
         TextColor3=colors.textDim,
         AutoButtonColor=false,
         ZIndex=6
     })
-    new("UICorner",{Parent=btn,CornerRadius=UDim.new(0,10)})
-    new("UIStroke",{Parent=btn,Color=colors.border,Thickness=1.5,Transparency=0.6})
+    new("UICorner",{Parent=btn,CornerRadius=UDim.new(0,8)})
+    new("UIStroke",{Parent=btn,Color=colors.border,Thickness=1.2,Transparency=0.6})
     
     btn.MouseEnter:Connect(function()
         TweenService:Create(btn,TweenInfo.new(0.2),{
             BackgroundColor3=hoverColor,
             BackgroundTransparency=0,
             TextColor3=colors.text,
-            Size=UDim2.new(0,38,0,38)
+            Size=UDim2.new(0,32,0,32)
         }):Play()
     end)
     btn.MouseLeave:Connect(function()
@@ -212,7 +212,7 @@ local function createControlButton(icon, hoverColor)
             BackgroundColor3=colors.glass,
             BackgroundTransparency=0.3,
             TextColor3=colors.textDim,
-            Size=UDim2.new(0,35,0,35)
+            Size=UDim2.new(0,30,0,30)
         }):Play()
     end)
     return btn
@@ -221,29 +221,29 @@ end
 local btnMin = createControlButton("─", colors.warning)
 local btnClose = createControlButton("×", colors.danger)
 
--- Sidebar
+-- Sidebar (smaller)
 local sidebar = new("Frame",{
     Parent=win,
-    Size=UDim2.new(0,160,1,-72),
-    Position=UDim2.new(0,8,0,64),
+    Size=UDim2.new(0,130,1,-60),
+    Position=UDim2.new(0,6,0,54),
     BackgroundColor3=colors.sidebarBg,
     BackgroundTransparency=0.2,
     BorderSizePixel=0,
     ZIndex=4
 })
-new("UICorner",{Parent=sidebar,CornerRadius=UDim.new(0,16)})
-new("UIStroke",{Parent=sidebar,Color=colors.border,Thickness=1.5,Transparency=0.6})
+new("UICorner",{Parent=sidebar,CornerRadius=UDim.new(0,12)})
+new("UIStroke",{Parent=sidebar,Color=colors.border,Thickness=1.2,Transparency=0.6})
 
 local navContainer = new("Frame",{
     Parent=sidebar,
-    Size=UDim2.new(1,-16,1,-16),
-    Position=UDim2.new(0,8,0,8),
+    Size=UDim2.new(1,-12,1,-12),
+    Position=UDim2.new(0,6,0,6),
     BackgroundTransparency=1,
     ZIndex=5
 })
 new("UIListLayout",{
     Parent=navContainer,
-    Padding=UDim.new(0,10),
+    Padding=UDim.new(0,8),
     SortOrder=Enum.SortOrder.LayoutOrder
 })
 
@@ -253,7 +253,7 @@ local navButtons = {}
 local function createNavButton(text, icon, page)
     local btn = new("TextButton",{
         Parent=navContainer,
-        Size=UDim2.new(1,0,0,45),
+        Size=UDim2.new(1,0,0,38),
         BackgroundColor3=colors.glass,
         BackgroundTransparency=page == currentPage and 0.1 or 0.5,
         BorderSizePixel=0,
@@ -261,35 +261,35 @@ local function createNavButton(text, icon, page)
         AutoButtonColor=false,
         ZIndex=7
     })
-    new("UICorner",{Parent=btn,CornerRadius=UDim.new(0,12)})
+    new("UICorner",{Parent=btn,CornerRadius=UDim.new(0,10)})
     
     local btnStroke = new("UIStroke",{
         Parent=btn,
         Color=page == currentPage and colors.primary or colors.border,
-        Thickness=page == currentPage and 2 or 1.5,
+        Thickness=page == currentPage and 1.8 or 1.2,
         Transparency=page == currentPage and 0.3 or 0.7
     })
     
     local iconLabel = new("TextLabel",{
         Parent=btn,
-        Size=UDim2.new(0,35,1,0),
-        Position=UDim2.new(0,8,0,0),
+        Size=UDim2.new(0,28,1,0),
+        Position=UDim2.new(0,6,0,0),
         BackgroundTransparency=1,
         Text=icon,
         Font=Enum.Font.GothamBold,
-        TextSize=18,
+        TextSize=15,
         TextColor3=page == currentPage and colors.primary or colors.textDim,
         ZIndex=8
     })
     
     local textLabel = new("TextLabel",{
         Parent=btn,
-        Size=UDim2.new(1,-48,1,0),
-        Position=UDim2.new(0,43,0,0),
+        Size=UDim2.new(1,-38,1,0),
+        Position=UDim2.new(0,34,0,0),
         BackgroundTransparency=1,
         Text=text,
         Font=Enum.Font.GothamSemibold,
-        TextSize=13,
+        TextSize=11,
         TextColor3=page == currentPage and colors.text or colors.textDim,
         TextXAlignment=Enum.TextXAlignment.Left,
         ZIndex=8
@@ -299,50 +299,49 @@ local function createNavButton(text, icon, page)
     return btn
 end
 
--- Content Area
+-- Content Area (adjusted)
 local contentBg = new("Frame",{
     Parent=win,
-    Size=UDim2.new(1,-180,1,-76),
-    Position=UDim2.new(0,176,0,68),
+    Size=UDim2.new(1,-145,1,-64),
+    Position=UDim2.new(0,142,0,57),
     BackgroundColor3=colors.darker,
     BackgroundTransparency=0.15,
     BorderSizePixel=0,
-    ClipsDescendants=true,  -- FIXED: Added ClipsDescendants
+    ClipsDescendants=true,
     ZIndex=4
 })
-new("UICorner",{Parent=contentBg,CornerRadius=UDim.new(0,16)})
-new("UIStroke",{Parent=contentBg,Color=colors.border,Thickness=1.5,Transparency=0.6})
+new("UICorner",{Parent=contentBg,CornerRadius=UDim.new(0,12)})
+new("UIStroke",{Parent=contentBg,Color=colors.border,Thickness=1.2,Transparency=0.6})
 
 local pages = {}
 
 local function createPage(name)
     local page = new("ScrollingFrame",{
         Parent=contentBg,
-        Size=UDim2.new(1,-16,1,-16),
-        Position=UDim2.new(0,8,0,8),
+        Size=UDim2.new(1,-12,1,-12),
+        Position=UDim2.new(0,6,0,6),
         BackgroundTransparency=1,
-        ScrollBarThickness=5,
+        ScrollBarThickness=4,
         ScrollBarImageColor3=colors.primary,
         BorderSizePixel=0,
         CanvasSize=UDim2.new(0,0,0,0),
         AutomaticCanvasSize=Enum.AutomaticSize.Y,
         Visible=false,
-        ClipsDescendants=true,  -- FIXED: Added ClipsDescendants
+        ClipsDescendants=true,
         ZIndex=5
     })
     new("UIListLayout",{
         Parent=page,
-        Padding=UDim.new(0,12),
+        Padding=UDim.new(0,10),
         SortOrder=Enum.SortOrder.LayoutOrder,
         HorizontalAlignment=Enum.HorizontalAlignment.Center
     })
-    -- FIXED: Added padding to prevent content touching edges
     new("UIPadding",{
         Parent=page,
-        PaddingTop=UDim.new(0,8),
-        PaddingBottom=UDim.new(0,8),
-        PaddingLeft=UDim.new(0,4),
-        PaddingRight=UDim.new(0,4)
+        PaddingTop=UDim.new(0,6),
+        PaddingBottom=UDim.new(0,6),
+        PaddingLeft=UDim.new(0,3),
+        PaddingRight=UDim.new(0,3)
     })
     pages[name] = page
     return page
@@ -362,7 +361,7 @@ local function switchPage(pageName)
         local isActive = name == pageName
         btnData.btn.BackgroundTransparency = isActive and 0.1 or 0.5
         btnData.stroke.Color = isActive and colors.primary or colors.border
-        btnData.stroke.Thickness = isActive and 2 or 1.5
+        btnData.stroke.Thickness = isActive and 1.8 or 1.2
         btnData.stroke.Transparency = isActive and 0.3 or 0.7
         btnData.icon.TextColor3 = isActive and colors.primary or colors.textDim
         btnData.text.TextColor3 = isActive and colors.text or colors.textDim
@@ -382,11 +381,11 @@ btnTeleport.MouseButton1Click:Connect(function() switchPage("Teleport") end)
 btnSettings.MouseButton1Click:Connect(function() switchPage("Settings") end)
 btnInfo.MouseButton1Click:Connect(function() switchPage("Info") end)
 
--- FIXED: Compact Toggle with proper sizing
+-- Compact Toggle (smaller)
 local function makeToggle(parent,label,callback)
     local f=new("Frame",{
         Parent=parent,
-        Size=UDim2.new(1,0,0,38),
+        Size=UDim2.new(1,0,0,32),
         BackgroundTransparency=1,
         ZIndex=6
     })
@@ -394,32 +393,32 @@ local function makeToggle(parent,label,callback)
     new("TextLabel",{
         Parent=f,
         Text=label,
-        Size=UDim2.new(0.62,0,1,0),  -- FIXED: Reduced width to prevent overlap
+        Size=UDim2.new(0.6,0,1,0),
         TextXAlignment=Enum.TextXAlignment.Left,
         BackgroundTransparency=1,
         TextColor3=colors.text,
         Font=Enum.Font.GothamMedium,
-        TextSize=12,
+        TextSize=10,
         TextWrapped=true,
         ZIndex=7
     })
     
     local toggleBg=new("Frame",{
         Parent=f,
-        Size=UDim2.new(0,50,0,26),
-        Position=UDim2.new(1,-52,0.5,-13),
+        Size=UDim2.new(0,42,0,22),
+        Position=UDim2.new(1,-44,0.5,-11),
         BackgroundColor3=colors.border,
         BackgroundTransparency=0.3,
         BorderSizePixel=0,
         ZIndex=7
     })
     new("UICorner",{Parent=toggleBg,CornerRadius=UDim.new(1,0)})
-    new("UIStroke",{Parent=toggleBg,Color=colors.border,Thickness=1.5,Transparency=0.5})
+    new("UIStroke",{Parent=toggleBg,Color=colors.border,Thickness=1.2,Transparency=0.5})
     
     local toggleCircle=new("Frame",{
         Parent=toggleBg,
-        Size=UDim2.new(0,20,0,20),
-        Position=UDim2.new(0,3,0.5,-10),
+        Size=UDim2.new(0,16,0,16),
+        Position=UDim2.new(0,3,0.5,-8),
         BackgroundColor3=colors.textDim,
         BorderSizePixel=0,
         ZIndex=8
@@ -442,47 +441,47 @@ local function makeToggle(parent,label,callback)
             BackgroundTransparency=on and 0 or 0.3
         }):Play()
         TweenService:Create(toggleCircle,TweenInfo.new(0.3,Enum.EasingStyle.Back),{
-            Position=on and UDim2.new(1,-23,0.5,-10) or UDim2.new(0,3,0.5,-10),
+            Position=on and UDim2.new(1,-19,0.5,-8) or UDim2.new(0,3,0.5,-8),
             BackgroundColor3=on and colors.text or colors.textDim
         }):Play()
         callback(on)
     end)
 end
 
--- FIXED: Compact Slider with proper boundaries
+-- Compact Slider (smaller)
 local function makeSlider(parent,label,min,max,def,onChange)
     local f=new("Frame",{
         Parent=parent,
-        Size=UDim2.new(1,0,0,55),
+        Size=UDim2.new(1,0,0,45),
         BackgroundTransparency=1,
-        ClipsDescendants=true,  -- FIXED: Added ClipsDescendants
+        ClipsDescendants=true,
         ZIndex=6
     })
     
     local lbl=new("TextLabel",{
         Parent=f,
         Text=("%s: %.2fs"):format(label,def),
-        Size=UDim2.new(1,0,0,20),
+        Size=UDim2.new(1,0,0,16),
         BackgroundTransparency=1,
         TextColor3=colors.text,
         TextXAlignment=Enum.TextXAlignment.Left,
         Font=Enum.Font.GothamMedium,
-        TextSize=12,
+        TextSize=10,
         ZIndex=7
     })
     
     local bar=new("Frame",{
         Parent=f,
-        Size=UDim2.new(1,-8,0,10),  -- FIXED: Reduced width to add margin
-        Position=UDim2.new(0,4,0,32),  -- FIXED: Added left margin
+        Size=UDim2.new(1,-6,0,8),
+        Position=UDim2.new(0,3,0,26),
         BackgroundColor3=colors.glass,
         BackgroundTransparency=0.4,
         BorderSizePixel=0,
-        ClipsDescendants=false,  -- Allow knob to slightly exceed
+        ClipsDescendants=false,
         ZIndex=7
     })
     new("UICorner",{Parent=bar,CornerRadius=UDim.new(1,0)})
-    new("UIStroke",{Parent=bar,Color=colors.border,Thickness=1.5,Transparency=0.7})
+    new("UIStroke",{Parent=bar,Color=colors.border,Thickness=1.2,Transparency=0.7})
     
     local fill=new("Frame",{
         Parent=bar,
@@ -495,21 +494,21 @@ local function makeSlider(parent,label,min,max,def,onChange)
     
     local knob=new("Frame",{
         Parent=bar,
-        Size=UDim2.new(0,20,0,20),  -- FIXED: Reduced knob size
-        Position=UDim2.new((def-min)/(max-min),-10,0.5,-10),
+        Size=UDim2.new(0,16,0,16),
+        Position=UDim2.new((def-min)/(max-min),-8,0.5,-8),
         BackgroundColor3=colors.text,
         BorderSizePixel=0,
         ZIndex=9
     })
     new("UICorner",{Parent=knob,CornerRadius=UDim.new(1,0)})
-    new("UIStroke",{Parent=knob,Color=colors.primary,Thickness=2,Transparency=0.4})
+    new("UIStroke",{Parent=knob,Color=colors.primary,Thickness=1.5,Transparency=0.4})
     
     local dragging=false
     local function update(x)
         local rel=math.clamp((x-bar.AbsolutePosition.X)/math.max(bar.AbsoluteSize.X,1),0,1)
         local val=min+(max-min)*rel
         fill.Size=UDim2.new(rel,0,1,0)
-        knob.Position=UDim2.new(rel,-10,0.5,-10)
+        knob.Position=UDim2.new(rel,-8,0.5,-8)
         lbl.Text=("%s: %.2fs"):format(label,val)
         onChange(val)
     end
@@ -532,24 +531,24 @@ local function makeSlider(parent,label,min,max,def,onChange)
     end)
 end
 
--- FIXED: Compact Panel with proper clipping and auto-sizing
+-- Compact Panel (smaller)
 local function makePanel(parent,title,icon)
     local p=new("Frame",{
         Parent=parent,
-        Size=UDim2.new(0.96,0,0,50),  -- FIXED: Start with small height, will auto-expand
+        Size=UDim2.new(0.96,0,0,50),
         BackgroundColor3=colors.glass,
         BackgroundTransparency=0.3,
         BorderSizePixel=0,
-        ClipsDescendants=true,  -- FIXED: Added ClipsDescendants
-        AutomaticSize=Enum.AutomaticSize.Y,  -- FIXED: Auto-resize based on content
+        ClipsDescendants=true,
+        AutomaticSize=Enum.AutomaticSize.Y,
         ZIndex=6
     })
-    new("UICorner",{Parent=p,CornerRadius=UDim.new(0,14)})
-    new("UIStroke",{Parent=p,Color=colors.primary,Thickness=1.5,Transparency=0.6})
+    new("UICorner",{Parent=p,CornerRadius=UDim.new(0,12)})
+    new("UIStroke",{Parent=p,Color=colors.primary,Thickness=1.2,Transparency=0.6})
     
     local header=new("Frame",{
         Parent=p,
-        Size=UDim2.new(1,0,0,42),
+        Size=UDim2.new(1,0,0,35),
         BackgroundTransparency=1,
         BorderSizePixel=0,
         ZIndex=7
@@ -558,10 +557,10 @@ local function makePanel(parent,title,icon)
     new("TextLabel",{
         Parent=header,
         Text=icon.." "..title,
-        Size=UDim2.new(1,-20,1,0),
-        Position=UDim2.new(0,10,0,0),
+        Size=UDim2.new(1,-16,1,0),
+        Position=UDim2.new(0,8,0,0),
         Font=Enum.Font.GothamBold,
-        TextSize=14,
+        TextSize=12,
         TextColor3=colors.text,
         BackgroundTransparency=1,
         TextXAlignment=Enum.TextXAlignment.Left,
@@ -570,25 +569,136 @@ local function makePanel(parent,title,icon)
     
     local container=new("Frame",{
         Parent=p,
-        Size=UDim2.new(1,-20,0,0),  -- FIXED: Start with 0 height
-        Position=UDim2.new(0,10,0,47),
+        Size=UDim2.new(1,-16,0,0),
+        Position=UDim2.new(0,8,0,38),
         BackgroundTransparency=1,
-        ClipsDescendants=false,  -- FIXED: Changed to false to allow content to be visible
-        AutomaticSize=Enum.AutomaticSize.Y,  -- FIXED: Auto-resize based on content
+        ClipsDescendants=false,
+        AutomaticSize=Enum.AutomaticSize.Y,
         ZIndex=7
     })
-    local layout = new("UIListLayout",{
+    new("UIListLayout",{
         Parent=container,
-        Padding=UDim.new(0,8),
+        Padding=UDim.new(0,6),
         SortOrder=Enum.SortOrder.LayoutOrder
     })
-    -- FIXED: Add padding at bottom
     new("UIPadding",{
         Parent=container,
-        PaddingBottom=UDim.new(0,10)
+        PaddingBottom=UDim.new(0,8)
     })
     
     return container
+end
+
+-- DROPDOWN FUNCTION
+local function makeDropdown(parent, title, icon, items, onSelect)
+    local dropdownFrame = new("Frame", {
+        Parent = parent,
+        Size = UDim2.new(0.96, 0, 0, 40),
+        BackgroundColor3 = colors.glass,
+        BackgroundTransparency = 0.3,
+        BorderSizePixel = 0,
+        AutomaticSize = Enum.AutomaticSize.Y,
+        ZIndex = 6
+    })
+    new("UICorner", {Parent = dropdownFrame, CornerRadius = UDim.new(0, 12)})
+    new("UIStroke", {Parent = dropdownFrame, Color = colors.primary, Thickness = 1.2, Transparency = 0.6})
+    
+    local header = new("TextButton", {
+        Parent = dropdownFrame,
+        Size = UDim2.new(1, -16, 0, 35),
+        Position = UDim2.new(0, 8, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "",
+        AutoButtonColor = false,
+        ZIndex = 7
+    })
+    
+    local headerLabel = new("TextLabel", {
+        Parent = header,
+        Text = icon .. " " .. title,
+        Size = UDim2.new(1, -25, 1, 0),
+        BackgroundTransparency = 1,
+        Font = Enum.Font.GothamBold,
+        TextSize = 11,
+        TextColor3 = colors.text,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 8
+    })
+    
+    local arrow = new("TextLabel", {
+        Parent = header,
+        Text = "▼",
+        Size = UDim2.new(0, 20, 1, 0),
+        Position = UDim2.new(1, -20, 0, 0),
+        BackgroundTransparency = 1,
+        Font = Enum.Font.GothamBold,
+        TextSize = 10,
+        TextColor3 = colors.primary,
+        ZIndex = 8
+    })
+    
+    local listContainer = new("Frame", {
+        Parent = dropdownFrame,
+        Size = UDim2.new(1, -16, 0, 0),
+        Position = UDim2.new(0, 8, 0, 40),
+        BackgroundTransparency = 1,
+        Visible = false,
+        AutomaticSize = Enum.AutomaticSize.Y,
+        ClipsDescendants = false,
+        ZIndex = 7
+    })
+    new("UIListLayout", {Parent = listContainer, Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder})
+    new("UIPadding", {Parent = listContainer, PaddingBottom = UDim.new(0, 8)})
+    
+    local isOpen = false
+    
+    header.MouseButton1Click:Connect(function()
+        isOpen = not isOpen
+        listContainer.Visible = isOpen
+        arrow.Text = isOpen and "▲" or "▼"
+        TweenService:Create(arrow, TweenInfo.new(0.2), {Rotation = isOpen and 180 or 0}):Play()
+    end)
+    
+    for _, itemName in ipairs(items) do
+        local itemBtn = new("TextButton", {
+            Parent = listContainer,
+            Size = UDim2.new(1, 0, 0, 30),
+            BackgroundColor3 = colors.darker,
+            BackgroundTransparency = 0.4,
+            BorderSizePixel = 0,
+            Text = "• " .. itemName,
+            Font = Enum.Font.GothamMedium,
+            TextSize = 10,
+            TextColor3 = colors.textDim,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            AutoButtonColor = false,
+            ZIndex = 8
+        })
+        new("UICorner", {Parent = itemBtn, CornerRadius = UDim.new(0, 8)})
+        new("UIStroke", {Parent = itemBtn, Color = colors.border, Thickness = 1, Transparency = 0.7})
+        new("UIPadding", {Parent = itemBtn, PaddingLeft = UDim.new(0, 10)})
+        
+        itemBtn.MouseEnter:Connect(function()
+            TweenService:Create(itemBtn, TweenInfo.new(0.15), {
+                BackgroundColor3 = colors.primary,
+                BackgroundTransparency = 0.2,
+                TextColor3 = colors.text
+            }):Play()
+        end)
+        itemBtn.MouseLeave:Connect(function()
+            TweenService:Create(itemBtn, TweenInfo.new(0.15), {
+                BackgroundColor3 = colors.darker,
+                BackgroundTransparency = 0.4,
+                TextColor3 = colors.textDim
+            }):Play()
+        end)
+        itemBtn.MouseButton1Click:Connect(function()
+            onSelect(itemName)
+            isOpen = false
+            listContainer.Visible = false
+            arrow.Text = "▼"
+        end)
+    end
 end
 
 -- Main Page Content
@@ -602,56 +712,30 @@ makeToggle(pnl2,"Enable Instant 2x Speed",function(on) if on then instant2x.Star
 makeSlider(pnl2,"Fishing Delay",0,5.0,0.3,function(v) instant2x.Settings.FishingDelay=v end)
 makeSlider(pnl2,"Cancel Delay",0.01,1.5,0.19,function(v) instant2x.Settings.CancelDelay=v end)
 
--- 🌍 Teleport Tab
-local teleportPage = createPage("Teleport")
-
-local btnTeleport = createNavButton("Teleport", "🌍", "Teleport")
-btnTeleport.MouseButton1Click:Connect(function() switchPage("Teleport") end)
-
--- Panel utama untuk daftar lokasi
-local pnlTeleport = makePanel(teleportPage, "Select Location", "")
-
+-- Teleport Page with Dropdowns
+local locationItems = {}
 for name, _ in pairs(TeleportModule.Locations) do
-    local btn = Instance.new("TextButton")
-    btn.Parent = pnlTeleport
-    btn.Size = UDim2.new(1, -10, 0, 36)
-    btn.BackgroundColor3 = colors.glass
-    btn.BackgroundTransparency = 0.25
-    btn.BorderSizePixel = 0
-    btn.Text = "📍 " .. name
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 13
-    btn.TextColor3 = colors.text
-    btn.AutoButtonColor = false
-    btn.ZIndex = 8
-
-    local stroke = Instance.new("UIStroke", btn)
-    stroke.Color = colors.primary
-    stroke.Thickness = 1.4
-    stroke.Transparency = 0.4
-
-    local corner = Instance.new("UICorner", btn)
-    corner.CornerRadius = UDim.new(0, 10)
-
-    btn.MouseEnter:Connect(function()
-        TweenService:Create(btn, TweenInfo.new(0.15), {
-            BackgroundColor3 = colors.primary,
-            BackgroundTransparency = 0.1,
-            TextColor3 = colors.dark
-        }):Play()
-    end)
-    btn.MouseLeave:Connect(function()
-        TweenService:Create(btn, TweenInfo.new(0.15), {
-            BackgroundColor3 = colors.glass,
-            BackgroundTransparency = 0.25,
-            TextColor3 = colors.text
-        }):Play()
-    end)
-    btn.MouseButton1Click:Connect(function()
-        TeleportModule.TeleportTo(name)
-    end)
+    table.insert(locationItems, name)
 end
+table.sort(locationItems)
 
+makeDropdown(teleportPage, "Teleport to Location", "📍", locationItems, function(selectedLocation)
+    TeleportModule.TeleportTo(selectedLocation)
+    print("Teleporting to: " .. selectedLocation)
+end)
+
+local playerItems = {}
+for _, player in ipairs(Players:GetPlayers()) do
+    if player ~= localPlayer then
+        table.insert(playerItems, player.Name)
+    end
+end
+table.sort(playerItems)
+
+makeDropdown(teleportPage, "Teleport to Player", "👤", playerItems, function(selectedPlayer)
+    TeleportToPlayer.TeleportTo(selectedPlayer)
+    print("Teleporting to player: " .. selectedPlayer)
+end)
 
 -- Settings Page
 local settingsPnl = makePanel(settingsPage,"⚙️ General Settings","")
@@ -662,14 +746,15 @@ makeToggle(settingsPnl,"Performance Mode",function(on) print("Performance:",on) 
 -- Info Page
 local infoText = new("TextLabel",{
     Parent=infoPage,
-    Size=UDim2.new(0.96,0,0,450),
+    Size=UDim2.new(0.96,0,0,350),
     BackgroundColor3=colors.glass,
     BackgroundTransparency=0.3,
     BorderSizePixel=0,
     Text=[[
 🌟 KEABY ULTRA v4.0
 
-Advanced fishing automation with modern cyberpunk design.
+Advanced fishing automation
+Mobile optimized interface
 
 ⚡ INSTANT FISHING
 • Ultra-fast automation
@@ -681,54 +766,60 @@ Advanced fishing automation with modern cyberpunk design.
 • Independent controls
 • Optimized performance
 
+🌍 TELEPORT
+• Location teleport
+• Player teleport
+• Dropdown selection
+
 ⚙️ SETTINGS
 • Auto-save
 • Notifications
 • Performance mode
 
-💡 USAGE TIPS
-• Lower delay = faster (riskier)
-• Higher delay = safer (slower)
-• Recommended: 0.12s fishing, 0.05s cancel
+💡 TIPS
+• Lower delay = faster (risky)
+• Higher delay = safer (slow)
+• Recommended settings:
+  1.30s fishing, 0.19s cancel
 
 🎮 CONTROLS
 • Drag top bar to move
-• Click (─) to minimize
-• Click (×) to close
+• (─) to minimize
+• (×) to close
 
 Created with 💎 by Keaby Team
-Ultra Modern Edition 2024
+Mobile Edition 2024
     ]],
     Font=Enum.Font.Gotham,
-    TextSize=11,
+    TextSize=9,
     TextColor3=colors.textDim,
     TextWrapped=true,
     TextXAlignment=Enum.TextXAlignment.Left,
     TextYAlignment=Enum.TextYAlignment.Top,
     ZIndex=7
 })
-new("UICorner",{Parent=infoText,CornerRadius=UDim.new(0,14)})
-new("UIStroke",{Parent=infoText,Color=colors.primary,Thickness=1.5,Transparency=0.6})
-new("UIPadding",{Parent=infoText,PaddingTop=UDim.new(0,12),PaddingBottom=UDim.new(0,12),PaddingLeft=UDim.new(0,12),PaddingRight=UDim.new(0,12)})
+new("UICorner",{Parent=infoText,CornerRadius=UDim.new(0,12)})
+new("UIStroke",{Parent=infoText,Color=colors.primary,Thickness=1.2,Transparency=0.6})
+new("UIPadding",{Parent=infoText,PaddingTop=UDim.new(0,10),PaddingBottom=UDim.new(0,10),PaddingLeft=UDim.new(0,10),PaddingRight=UDim.new(0,10)})
 
--- Minimized Icon
+-- FIXED: Minimized Icon (smaller size: 50x50)
 local minimized=false
 local icon
-local savedIconPos = UDim2.new(0,30,0,150)
+local savedIconPos = UDim2.new(0,20,0,120)
 
 local function createMinimizedIcon()
     if icon then return end
     icon=new("Frame",{
         Parent=gui,
-        Size=UDim2.new(0,70,0,70),
+        Size=UDim2.new(0,50,0,50),  -- FIXED: Reduced from 70x70 to 50x50
         Position=savedIconPos,
         BackgroundColor3=colors.darkest,
         BorderSizePixel=0,
         ZIndex=100
     })
-    new("UICorner",{Parent=icon,CornerRadius=UDim.new(0,18)})
+    new("UICorner",{Parent=icon,CornerRadius=UDim.new(0,14)})
     
-    local iconStroke = new("UIStroke",{Parent=icon,Color=colors.primary,Thickness=2.5,Transparency=0.2})
+    local iconStroke = new("UIStroke",{Parent=icon,Color=colors.primary,Thickness=2,Transparency=0.2})
     local iconGrad = new("UIGradient",{
         Parent=iconStroke,
         Color=ColorSequence.new{
@@ -753,7 +844,7 @@ local function createMinimizedIcon()
         Text="K",
         Size=UDim2.new(1,0,1,0),
         Font=Enum.Font.GothamBold,
-        TextSize=36,
+        TextSize=26,  -- FIXED: Reduced from 36 to 26
         BackgroundTransparency=1,
         TextColor3=colors.primary,
         ZIndex=101
@@ -781,7 +872,7 @@ local function createMinimizedIcon()
                 savedIconPos = icon.Position
                 if not dragMoved then
                     inputBlocker.Visible,blurBg.Visible,win.Visible = true,true,true
-                    TweenService:Create(win,TweenInfo.new(0.5,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{Size=UDim2.new(0,700,0,450),Position=UDim2.new(0.5,-350,0.5,-225)}):Play()
+                    TweenService:Create(win,TweenInfo.new(0.5,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{Size=UDim2.new(0,520,0,380),Position=UDim2.new(0.5,-260,0.5,-190)}):Play()
                     if icon then icon:Destroy() icon = nil end
                     minimized = false
                 end
@@ -844,12 +935,12 @@ task.spawn(function()
     TweenService:Create(inputBlocker,TweenInfo.new(0.4),{BackgroundTransparency=0.3}):Play()
     TweenService:Create(blurBg,TweenInfo.new(0.4),{BackgroundTransparency=0.15}):Play()
     TweenService:Create(win,TweenInfo.new(0.6,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{
-        Size=UDim2.new(0,700,0,450),
-        Position=UDim2.new(0.5,-350,0.5,-225)
+        Size=UDim2.new(0,520,0,380),
+        Position=UDim2.new(0.5,-260,0.5,-190)
     }):Play()
 end)
 
-print("✨ Keaby GUI v4.0 Ultra FIXED loaded successfully!")
-print("🎨 Refined Cyberpunk Design | Compact Layout")
-print("🔧 Fixed overflow issues - all elements stay within bounds")
+print("✨ Keaby GUI v4.0 Ultra MOBILE OPTIMIZED loaded!")
+print("📱 Perfect for mobile devices")
+print("🔧 Smaller UI, dropdown teleport system")
 print("💎 Created by Keaby Team")
