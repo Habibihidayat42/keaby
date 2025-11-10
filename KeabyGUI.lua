@@ -1079,7 +1079,7 @@ makeToggle(pnlAntiAFK, "Enable Anti-AFK", function(on)
 end)
 
 local pnlFPS = makePanel(settingsPage, "⚡ FPS Unlocker", "Atur batas frame rate untuk gameplay yang lebih halus")
--- toggle utama
+
 makeToggle(pnlFPS, "Enable Unlock FPS", function(on)
     if on then
         UnlockFPS.Start()
@@ -1088,7 +1088,6 @@ makeToggle(pnlFPS, "Enable Unlock FPS", function(on)
     end
 end)
 
--- dropdown untuk memilih FPS cap
 makeDropdown(pnlFPS, "FPS Limit", {"60 FPS", "90 FPS", "120 FPS", "240 FPS"}, "60 FPS", function(selected)
     local fpsValue = tonumber(string.match(selected, "%d+"))
     if fpsValue then
@@ -1099,6 +1098,7 @@ makeDropdown(pnlFPS, "FPS Limit", {"60 FPS", "90 FPS", "120 FPS", "240 FPS"}, "6
         end
     end
 end)
+
 
 makeToggle(settingsPnl,"Auto Save Settings",function(on) print("Auto Save:",on) end)
 makeToggle(settingsPnl,"Show Notifications",function(on) print("Notifications:",on) end)
