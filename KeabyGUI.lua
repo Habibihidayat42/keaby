@@ -605,7 +605,7 @@ makeSlider(pnl2,"Cancel Delay",0.01,1.5,0.19,function(v) instant2x.Settings.Canc
 -- Panel utama untuk daftar lokasi
 local pnlTeleport = makePanel(teleportPage, "🌍 Teleport System", "")
 
--- Fungsi pembuat dropdown stylish
+-- Fungsi pembuat dropdown stylish (FIXED)
 local function makeDropdown(parent, title, items, onSelect)
     local container = Instance.new("Frame")
     container.Parent = parent
@@ -613,8 +613,8 @@ local function makeDropdown(parent, title, items, onSelect)
     container.BackgroundColor3 = colors.glass
     container.BackgroundTransparency = 0.25
     container.BorderSizePixel = 0
-    container.ZIndex = 8
-    container.ClipsDescendants = true
+    container.ZIndex = 20
+    container.ClipsDescendants = false -- ✅ biar dropdown bisa keluar area panel
 
     local stroke = Instance.new("UIStroke", container)
     stroke.Color = colors.primary
@@ -634,24 +634,26 @@ local function makeDropdown(parent, title, items, onSelect)
     titleLabel.TextSize = 13
     titleLabel.TextColor3 = colors.text
     titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    titleLabel.ZIndex = 9
+    titleLabel.ZIndex = 21
 
     local toggleBtn = Instance.new("TextButton")
     toggleBtn.Parent = container
     toggleBtn.Size = UDim2.new(1, 0, 1, 0)
     toggleBtn.BackgroundTransparency = 1
     toggleBtn.Text = ""
-    toggleBtn.ZIndex = 10
+    toggleBtn.ZIndex = 22
 
+    -- ✅ Buat dropdown muncul langsung di GUI utama, bukan di dalam panel
     local dropFrame = Instance.new("Frame")
-    dropFrame.Parent = container
-    dropFrame.Size = UDim2.new(1, 0, 0, 0)
-    dropFrame.Position = UDim2.new(0, 0, 1, 0)
+    dropFrame.Parent = gui
+    dropFrame.AnchorPoint = Vector2.new(0, 0)
+    dropFrame.Position = UDim2.new(0, container.AbsolutePosition.X, 0, container.AbsolutePosition.Y + container.AbsoluteSize.Y)
+    dropFrame.Size = UDim2.new(0, container.AbsoluteSize.X, 0, 0)
     dropFrame.BackgroundColor3 = colors.darker
     dropFrame.BackgroundTransparency = 0.15
     dropFrame.BorderSizePixel = 0
     dropFrame.Visible = false
-    dropFrame.ZIndex = 9
+    dropFrame.ZIndex = 100 -- ✅ di atas semua elemen
 
     local dropCorner = Instance.new("UICorner", dropFrame)
     dropCorner.CornerRadius = UDim.new(0, 8)
@@ -660,18 +662,37 @@ local function makeDropdown(parent, title, items, onSelect)
     layout.Padding = UDim.new(0, 6)
     layout.SortOrder = Enum.SortOrder.LayoutOrder
 
+    -- Update posisi dropdown saat parent berpindah
+    container:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
+        dropFrame.Position = UDim2.new(0, container.AbsolutePosition.X, 0, container.AbsolutePosition.Y + container.AbsoluteSize.Y)
+        dropFrame.Size = UDim2.new(0, container.AbsoluteSize.X, dropFrame.Size.Y.Scale, dropFrame.Size.Y.Offset)
+    end)
+
+    -- Animasi buka/tutup
     local expanded = false
     local function toggleDropdown()
         expanded = not expanded
         titleLabel.Text = (expanded and "▲ " or "▼ ") .. title
         dropFrame.Visible = expanded
         local newHeight = expanded and (#items * 36 + 10) or 0
-        TweenService:Create(dropFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Size = UDim2.new(1, 0, 0, newHeight)}):Play()
+        TweenService:Create(dropFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Size = UDim2.new(0, container.AbsoluteSize.X, 0, newHeight)}):Play()
     end
 
     toggleBtn.MouseButton1Click:Connect(toggleDropdown)
 
-    -- Buat tombol item
+    -- Tutup dropdown kalau klik di luar
+    UserInputService.InputBegan:Connect(function(input, gpe)
+        if not gpe and expanded and input.UserInputType == Enum.UserInputType.MouseButton1 then
+            local mousePos = input.Position
+            local guiPos = dropFrame.AbsolutePosition
+            local guiSize = dropFrame.AbsoluteSize
+            if not (mousePos.X > guiPos.X and mousePos.X < guiPos.X + guiSize.X and mousePos.Y > guiPos.Y and mousePos.Y < guiPos.Y + guiSize.Y) then
+                toggleDropdown()
+            end
+        end
+    end)
+
+    -- Tombol pilihan dropdown
     for _, itemName in ipairs(items) do
         local btn = Instance.new("TextButton")
         btn.Parent = dropFrame
@@ -684,7 +705,7 @@ local function makeDropdown(parent, title, items, onSelect)
         btn.TextSize = 12
         btn.TextColor3 = colors.text
         btn.AutoButtonColor = false
-        btn.ZIndex = 10
+        btn.ZIndex = 101
 
         local stroke2 = Instance.new("UIStroke", btn)
         stroke2.Color = colors.primary
@@ -710,9 +731,11 @@ local function makeDropdown(parent, title, items, onSelect)
         end)
         btn.MouseButton1Click:Connect(function()
             onSelect(itemName)
+            toggleDropdown()
         end)
     end
 end
+
 
 -- 1️⃣ Dropdown untuk lokasi teleport
 local locationNames = {}
