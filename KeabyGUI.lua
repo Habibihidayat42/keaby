@@ -1,5 +1,5 @@
--- KeabyGUI_v4.0.lua - Ultra Modern Edition (MOBILE OPTIMIZED)
--- Neon Cyberpunk Theme with Refined Design 🌟
+-- KeabyGUI_v4.1 (Performance Edition) - OPTIMIZED
+-- Neon Cyberpunk Theme - Fast-load + Low CPU
 
 repeat task.wait() until game:IsLoaded()
 
@@ -9,26 +9,100 @@ local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local localPlayer = Players.LocalPlayer
 
-repeat task.wait() until localPlayer:FindFirstChild("PlayerGui")
+-- Wait for PlayerGui in a single efficient loop
+repeat task.wait() until game:IsLoaded() and Players.LocalPlayer and Players.LocalPlayer:FindFirstChild("PlayerGui")
 
+-- small helper to create instances quickly
 local function new(class, props)
     local inst = Instance.new(class)
     for k,v in pairs(props or {}) do inst[k] = v end
     return inst
 end
 
-local instant = loadstring(game:HttpGet("https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/Instant.lua"))()
-local instant2x = loadstring(game:HttpGet("https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/Instant2Xspeed.lua"))()
-local TeleportModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/TeleportModule.lua"))()
-local TeleportToPlayer = loadstring(game:HttpGet("https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/TeleportSystem/TeleportToPlayer.lua"))()
-local AutoSell = loadstring(game:HttpGet("https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/ShopFeatures/AutoSell.lua"))()
-local AutoSellTimer = loadstring(game:HttpGet("https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/ShopFeatures/AutoSellTimer.lua"))()
-local AntiAFK = loadstring(game:HttpGet("https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/Misc/AntiAFK.lua"))()
-local UnlockFPS = loadstring(game:HttpGet("https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/Misc/UnlockFPS.lua"))()
+-- ------------------------------
+-- MODULE LOADING (ASYNC + SAFE)
+-- ------------------------------
+local Modules = {}
+local ModuleURLs = {
+    Instant = "https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/Instant.lua",
+    Instant2X = "https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/Instant2Xspeed.lua",
+    Teleport = "https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/TeleportModule.lua",
+    TeleportToPlayer = "https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/TeleportSystem/TeleportToPlayer.lua",
+    AutoSell = "https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/ShopFeatures/AutoSell.lua",
+    AutoSellTimer = "https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/ShopFeatures/AutoSellTimer.lua",
+    AntiAFK = "https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/Misc/AntiAFK.lua",
+    UnlockFPS = "https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/Misc/UnlockFPS.lua"
+}
 
+-- Create safe stub (so UI won't error if module not loaded yet)
+local function make_stub(name)
+    local t = {}
+    t.Start = function() warn("[KeabyGUI] Module '"..name.."' not ready yet.") end
+    t.Stop  = function() warn("[KeabyGUI] Module '"..name.."' not ready yet.") end
+    t.SetInterval = function() warn("[KeabyGUI] Module '"..name.."' not ready yet.") end
+    t.SetCap = function() warn("[KeabyGUI] Module '"..name.."' not ready yet.") end
+    t.SellOnce = function() warn("[KeabyGUI] Module '"..name.."' not ready yet.") end
+    t.TeleportTo = function() warn("[KeabyGUI] Module '"..name.."' not ready yet.") end
+    t.Locations = {}
+    return t
+end
 
+-- prefill Modules with stubs
+for name,_ in pairs(ModuleURLs) do
+    Modules[name] = make_stub(name)
+end
 
--- Ultra Modern Cyberpunk Palette
+-- Async download & load modules in parallel (non-blocking)
+task.spawn(function()
+    for name, url in pairs(ModuleURLs) do
+        task.spawn(function()
+            local ok, res = pcall(function()
+                local body = game:HttpGet(url)
+                local f = loadstring(body)
+                if f then
+                    return f()
+                end
+            end)
+            if ok and res then
+                Modules[name] = res
+                print("[KeabyGUI] Module loaded:", name)
+            else
+                warn("[KeabyGUI] Failed to load module:", name, res)
+            end
+        end)
+    end
+end)
+
+-- expose common names for convenience (will point to stub until real module replaces it)
+local instant = Modules.Instant
+local instant2x = Modules.Instant2X
+local TeleportModule = Modules.Teleport
+local TeleportToPlayer = Modules.TeleportToPlayer
+local AutoSell = Modules.AutoSell
+local AutoSellTimer = Modules.AutoSellTimer
+local AntiAFK = Modules.AntiAFK
+local UnlockFPS = Modules.UnlockFPS
+
+-- When module table replaced later, update local refs (listen for completion)
+-- We'll poll Modules table once after a short delay to pick up loaded modules.
+task.spawn(function()
+    while true do
+        -- if actual modules replaced the stub (heuristic: Start ~= stub.Start), update refs
+        if Modules.Instant and Modules.Instant.Start ~= make_stub("Instant").Start then instant = Modules.Instant end
+        if Modules.Instant2X and Modules.Instant2X.Start ~= make_stub("Instant2X").Start then instant2x = Modules.Instant2X end
+        if Modules.Teleport and Modules.Teleport.TeleportTo ~= make_stub("Teleport").TeleportTo then TeleportModule = Modules.Teleport end
+        if Modules.TeleportToPlayer and Modules.TeleportToPlayer.TeleportTo ~= make_stub("TeleportToPlayer").TeleportTo then TeleportToPlayer = Modules.TeleportToPlayer end
+        if Modules.AutoSell and Modules.AutoSell.SellOnce ~= make_stub("AutoSell").SellOnce then AutoSell = Modules.AutoSell end
+        if Modules.AutoSellTimer and Modules.AutoSellTimer.SetInterval ~= make_stub("AutoSellTimer").SetInterval then AutoSellTimer = Modules.AutoSellTimer end
+        if Modules.AntiAFK and Modules.AntiAFK.Start ~= make_stub("AntiAFK").Start then AntiAFK = Modules.AntiAFK end
+        if Modules.UnlockFPS and Modules.UnlockFPS.SetCap ~= make_stub("UnlockFPS").SetCap then UnlockFPS = Modules.UnlockFPS end
+        task.wait(1.5)
+    end
+end)
+
+-- ------------------------------
+-- COLORS / SHARED UTILITIES
+-- ------------------------------
 local colors = {
     primary = Color3.fromRGB(0, 255, 255),
     secondary = Color3.fromRGB(255, 0, 255),
@@ -46,8 +120,20 @@ local colors = {
     sidebarBg = Color3.fromRGB(12, 12, 20),
 }
 
+-- lightweight tween helper (reuse TweenInfo)
+local _TI = TweenInfo.new(0.15, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
+local function fastTween(obj, props, time)
+    time = time or 0.15
+    local t = TweenService:Create(obj, TweenInfo.new(time, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), props)
+    t:Play()
+    return t
+end
+
+-- ------------------------------
+-- INSTANT ANTI-FREEZE GUI (SKELETON)
+-- ------------------------------
 local gui = new("ScreenGui",{
-    Name="KeabyGUI_Ultra",
+    Name="KeabyGUI_Ultra_Optimized",
     Parent=localPlayer.PlayerGui,
     IgnoreGuiInset=true,
     ResetOnSpawn=false,
@@ -55,28 +141,28 @@ local gui = new("ScreenGui",{
     DisplayOrder=999
 })
 
+-- Input blocker + blur (minimal)
 local inputBlocker = new("Frame",{
     Parent=gui,
     Size=UDim2.new(1,0,1,0),
     BackgroundColor3=Color3.fromRGB(0,0,0),
-    BackgroundTransparency=0.3,
+    BackgroundTransparency=1, -- start hidden to reduce render cost
     BorderSizePixel=0,
     Visible=false,
     ZIndex=1,
     Active=true
 })
-
 local blurBg = new("Frame",{
     Parent=gui,
     Size=UDim2.new(1,0,1,0),
     BackgroundColor3=Color3.fromRGB(0,0,0),
-    BackgroundTransparency=0.15,
+    BackgroundTransparency=1,
     BorderSizePixel=0,
     Visible=false,
     ZIndex=2
 })
 
--- FIXED: Smaller window size for mobile (reduced from 700x450 to 520x380)
+-- Main window skeleton (created immediately, minimal children)
 local win = new("Frame",{
     Parent=gui,
     Size=UDim2.new(0,520,0,380),
@@ -89,223 +175,37 @@ local win = new("Frame",{
 })
 new("UICorner",{Parent=win,CornerRadius=UDim.new(0,16)})
 
--- Animated border
-local neonBorder = new("UIStroke",{
-    Parent=win,
-    Color=colors.primary,
-    Thickness=2,
-    Transparency=0,
-    ApplyStrokeMode=Enum.ApplyStrokeMode.Border
-})
-
-local neonGradient = new("UIGradient",{
-    Parent=neonBorder,
-    Color=ColorSequence.new{
-        ColorSequenceKeypoint.new(0, colors.primary),
-        ColorSequenceKeypoint.new(0.33, colors.secondary),
-        ColorSequenceKeypoint.new(0.66, colors.accent),
-        ColorSequenceKeypoint.new(1, colors.primary)
-    },
-    Rotation=0
-})
-
-task.spawn(function()
-    while gui.Parent do
-        for i = 0, 360, 2 do
-            if not gui.Parent then break end
-            neonGradient.Rotation = i
-            task.wait(0.03)
-        end
-    end
-end)
-
--- Top Bar (smaller)
-local topBar = new("Frame",{
-    Parent=win,
-    Size=UDim2.new(1,0,0,50),
-    BackgroundColor3=colors.dark,
-    BackgroundTransparency=0.1,
-    BorderSizePixel=0,
-    ZIndex=4
-})
+local topBar = new("Frame",{ Parent=win, Size=UDim2.new(1,0,0,50), BackgroundColor3=colors.dark, BackgroundTransparency=0.1, BorderSizePixel=0, ZIndex=4 })
 new("UICorner",{Parent=topBar,CornerRadius=UDim.new(0,16)})
 
--- Logo Container (smaller)
-local logoContainer = new("Frame",{
-    Parent=topBar,
-    Size=UDim2.new(0,38,0,38),
-    Position=UDim2.new(0,10,0.5,-19),
-    BackgroundColor3=colors.darkest,
-    BorderSizePixel=0,
-    ZIndex=5
-})
-new("UICorner",{Parent=logoContainer,CornerRadius=UDim.new(0,10)})
-
-local logoStroke = new("UIStroke",{
-    Parent=logoContainer,
-    Color=colors.primary,
-    Thickness=1.8,
-    Transparency=0.3
-})
-
-local logoText = new("TextLabel",{
-    Parent=logoContainer,
-    Text="K",
-    Size=UDim2.new(1,0,1,0),
-    Font=Enum.Font.GothamBold,
-    TextSize=22,
-    BackgroundTransparency=1,
-    TextColor3=colors.primary,
-    ZIndex=6
-})
-
--- Title (smaller)
+-- title
 local titleLabel = new("TextLabel",{
     Parent=topBar,
-    Text="Keabyy",
-    Size=UDim2.new(0,150,1,0),
-    Position=UDim2.new(0,55,0,0),
+    Text="Keaby (loading...)",
+    Size=UDim2.new(0,220,1,0),
+    Position=UDim2.new(0,12,0,0),
     Font=Enum.Font.GothamBold,
     TextSize=16,
     BackgroundTransparency=1,
-    TextColor3=colors.text,
+    TextColor3=colors.textDim,
     TextXAlignment=Enum.TextXAlignment.Left,
     ZIndex=5
 })
 
--- Control Buttons (smaller)
-local controlsContainer = new("Frame",{
-    Parent=topBar,
-    Size=UDim2.new(0,75,0,30),
-    Position=UDim2.new(1,-82,0.5,-15),
-    BackgroundTransparency=1,
-    ZIndex=5
-})
-new("UIListLayout",{
-    Parent=controlsContainer,
-    FillDirection=Enum.FillDirection.Horizontal,
-    HorizontalAlignment=Enum.HorizontalAlignment.Right,
-    Padding=UDim.new(0,6)
-})
+-- controls container (placeholders)
+local controlsContainer = new("Frame",{ Parent=topBar, Size=UDim2.new(0,75,0,30), Position=UDim2.new(1,-82,0.5,-15), BackgroundTransparency=1, ZIndex=5 })
+new("UIListLayout",{ Parent=controlsContainer, FillDirection=Enum.FillDirection.Horizontal, HorizontalAlignment=Enum.HorizontalAlignment.Right, Padding=UDim.new(0,6) })
 
-local function createControlButton(icon, hoverColor)
-    local btn = new("TextButton",{
-        Parent=controlsContainer,
-        Text=icon,
-        Size=UDim2.new(0,30,0,30),
-        BackgroundColor3=colors.glass,
-        BackgroundTransparency=0.3,
-        BorderSizePixel=0,
-        Font=Enum.Font.GothamBold,
-        TextSize=icon == "×" and 20 or 16,
-        TextColor3=colors.textDim,
-        AutoButtonColor=false,
-        ZIndex=6
-    })
+local function makeControlButtonSkeleton(icon)
+    local btn = new("TextButton",{ Parent = controlsContainer, Text = icon, Size = UDim2.new(0,30,0,30), BackgroundTransparency=0.3, BorderSizePixel=0, Font=Enum.Font.GothamBold, TextSize = 16, TextColor3=colors.textDim, AutoButtonColor=false, ZIndex=6 })
     new("UICorner",{Parent=btn,CornerRadius=UDim.new(0,8)})
-    new("UIStroke",{Parent=btn,Color=colors.border,Thickness=1.2,Transparency=0.6})
-    
-    btn.MouseEnter:Connect(function()
-        TweenService:Create(btn,TweenInfo.new(0.2),{
-            BackgroundColor3=hoverColor,
-            BackgroundTransparency=0,
-            TextColor3=colors.text,
-            Size=UDim2.new(0,32,0,32)
-        }):Play()
-    end)
-    btn.MouseLeave:Connect(function()
-        TweenService:Create(btn,TweenInfo.new(0.2),{
-            BackgroundColor3=colors.glass,
-            BackgroundTransparency=0.3,
-            TextColor3=colors.textDim,
-            Size=UDim2.new(0,30,0,30)
-        }):Play()
-    end)
     return btn
 end
 
-local btnMin = createControlButton("─", colors.warning)
-local btnClose = createControlButton("×", colors.danger)
+local btnMin = makeControlButtonSkeleton("─")
+local btnClose = makeControlButtonSkeleton("×")
 
--- Sidebar (smaller)
-local sidebar = new("Frame",{
-    Parent=win,
-    Size=UDim2.new(0,130,1,-60),
-    Position=UDim2.new(0,6,0,54),
-    BackgroundColor3=colors.sidebarBg,
-    BackgroundTransparency=0.2,
-    BorderSizePixel=0,
-    ZIndex=4
-})
-new("UICorner",{Parent=sidebar,CornerRadius=UDim.new(0,12)})
-new("UIStroke",{Parent=sidebar,Color=colors.border,Thickness=1.2,Transparency=0.6})
-
-local navContainer = new("Frame",{
-    Parent=sidebar,
-    Size=UDim2.new(1,-12,1,-12),
-    Position=UDim2.new(0,6,0,6),
-    BackgroundTransparency=1,
-    ZIndex=5
-})
-new("UIListLayout",{
-    Parent=navContainer,
-    Padding=UDim.new(0,8),
-    SortOrder=Enum.SortOrder.LayoutOrder
-})
-
-local currentPage = "Main"
-local navButtons = {}
-
-local function createNavButton(text, icon, page)
-    local btn = new("TextButton",{
-        Parent=navContainer,
-        Size=UDim2.new(1,0,0,38),
-        BackgroundColor3=colors.glass,
-        BackgroundTransparency=page == currentPage and 0.1 or 0.5,
-        BorderSizePixel=0,
-        Text="",
-        AutoButtonColor=false,
-        ZIndex=7
-    })
-    new("UICorner",{Parent=btn,CornerRadius=UDim.new(0,10)})
-    
-    local btnStroke = new("UIStroke",{
-        Parent=btn,
-        Color=page == currentPage and colors.primary or colors.border,
-        Thickness=page == currentPage and 1.8 or 1.2,
-        Transparency=page == currentPage and 0.3 or 0.7
-    })
-    
-    local iconLabel = new("TextLabel",{
-        Parent=btn,
-        Size=UDim2.new(0,28,1,0),
-        Position=UDim2.new(0,6,0,0),
-        BackgroundTransparency=1,
-        Text=icon,
-        Font=Enum.Font.GothamBold,
-        TextSize=15,
-        TextColor3=page == currentPage and colors.primary or colors.textDim,
-        ZIndex=8
-    })
-    
-    local textLabel = new("TextLabel",{
-        Parent=btn,
-        Size=UDim2.new(1,-38,1,0),
-        Position=UDim2.new(0,34,0,0),
-        BackgroundTransparency=1,
-        Text=text,
-        Font=Enum.Font.GothamSemibold,
-        TextSize=11,
-        TextColor3=page == currentPage and colors.text or colors.textDim,
-        TextXAlignment=Enum.TextXAlignment.Left,
-        ZIndex=8
-    })
-    
-    navButtons[page] = {btn=btn, icon=iconLabel, text=textLabel, stroke=btnStroke}
-    return btn
-end
-
--- Content Area (adjusted)
+-- content background skeleton
 local contentBg = new("Frame",{
     Parent=win,
     Size=UDim2.new(1,-145,1,-64),
@@ -317,903 +217,412 @@ local contentBg = new("Frame",{
     ZIndex=4
 })
 new("UICorner",{Parent=contentBg,CornerRadius=UDim.new(0,12)})
-new("UIStroke",{Parent=contentBg,Color=colors.border,Thickness=1.2,Transparency=0.6})
 
-local pages = {}
+-- Loading placeholder content (shown immediately)
+local loadingLabel = new("TextLabel",{
+    Parent=contentBg,
+    Size=UDim2.new(1,0,1,0),
+    Position=UDim2.new(0,0,0,0),
+    BackgroundTransparency=1,
+    Text="🔄 Loading Keaby GUI modules...\nPlease wait a moment.",
+    Font=Enum.Font.Gotham,
+    TextSize=14,
+    TextWrapped=true,
+    TextColor3=colors.textDim,
+    ZIndex=5,
+    TextYAlignment=Enum.TextYAlignment.Center,
+    TextXAlignment=Enum.TextXAlignment.Center
+})
 
-local function createPage(name)
-    local page = new("ScrollingFrame",{
-        Parent=contentBg,
+-- Show a subtle opening animation (fast)
+task.spawn(function()
+    win.Size = UDim2.new(0,0,0,0)
+    win.Position = UDim2.new(0.5,0,0.5,0)
+    inputBlocker.Visible, blurBg.Visible = true, true
+    inputBlocker.BackgroundTransparency = 1
+    blurBg.BackgroundTransparency = 1
+
+    task.wait(0.05)
+    fastTween(inputBlocker, {BackgroundTransparency = 0.3}, 0.25)
+    fastTween(blurBg, {BackgroundTransparency = 0.15}, 0.25)
+    fastTween(win, {Size = UDim2.new(0,520,0,380), Position = UDim2.new(0.5,-260,0.5,-190)}, 0.35)
+    task.wait(0.4)
+    inputBlocker.Visible, blurBg.Visible = false, false
+end)
+
+-- ------------------------------
+-- DEFERRED: build full UI (heavy parts) AFTER skeleton displayed
+-- ------------------------------
+task.defer(function()
+    -- small delay to ensure skeleton rendered first
+    task.wait(0.08)
+
+    -- Create reusable stroke/gradient templates to clone (reduces repeated property set cost)
+    local baseStroke = Instance.new("UIStroke")
+    baseStroke.Color = colors.border
+    baseStroke.Thickness = 1.2
+    baseStroke.Transparency = 0.6
+
+    local function cloneStroke(parent)
+        local s = baseStroke:Clone()
+        s.Parent = parent
+        return s
+    end
+
+    -- Create sidebar & nav buttons (these are heavier and done after skeleton)
+    local sidebar = new("Frame",{
+        Parent=win,
+        Size=UDim2.new(0,130,1,-60),
+        Position=UDim2.new(0,6,0,54),
+        BackgroundColor3=colors.sidebarBg,
+        BackgroundTransparency=0.2,
+        BorderSizePixel=0,
+        ZIndex=4
+    })
+    new("UICorner",{Parent=sidebar,CornerRadius=UDim.new(0,12)})
+    cloneStroke(sidebar)
+
+    local navContainer = new("Frame",{
+        Parent=sidebar,
         Size=UDim2.new(1,-12,1,-12),
         Position=UDim2.new(0,6,0,6),
         BackgroundTransparency=1,
-        ScrollBarThickness=4,
-        ScrollBarImageColor3=colors.primary,
-        BorderSizePixel=0,
-        CanvasSize=UDim2.new(0,0,0,0),
-        AutomaticCanvasSize=Enum.AutomaticSize.Y,
-        Visible=false,
-        ClipsDescendants=true,
         ZIndex=5
     })
-    new("UIListLayout",{
-        Parent=page,
-        Padding=UDim.new(0,10),
-        SortOrder=Enum.SortOrder.LayoutOrder,
-        HorizontalAlignment=Enum.HorizontalAlignment.Center
-    })
-    new("UIPadding",{
-        Parent=page,
-        PaddingTop=UDim.new(0,6),
-        PaddingBottom=UDim.new(0,6),
-        PaddingLeft=UDim.new(0,3),
-        PaddingRight=UDim.new(0,3)
-    })
-    pages[name] = page
-    return page
-end
+    new("UIListLayout",{ Parent=navContainer, Padding=UDim.new(0,8), SortOrder=Enum.SortOrder.LayoutOrder })
 
-local mainPage = createPage("Main")
-local teleportPage = createPage("Teleport")
-local shopPage = createPage("Shop")
-local settingsPage = createPage("Settings")
-local infoPage = createPage("Info")
-mainPage.Visible = true
-
-local function switchPage(pageName)
-    if currentPage == pageName then return end
-    for _, page in pairs(pages) do page.Visible = false end
-    
-    for name, btnData in pairs(navButtons) do
-        local isActive = name == pageName
-        btnData.btn.BackgroundTransparency = isActive and 0.1 or 0.5
-        btnData.stroke.Color = isActive and colors.primary or colors.border
-        btnData.stroke.Thickness = isActive and 1.8 or 1.2
-        btnData.stroke.Transparency = isActive and 0.3 or 0.7
-        btnData.icon.TextColor3 = isActive and colors.primary or colors.textDim
-        btnData.text.TextColor3 = isActive and colors.text or colors.textDim
+    local pages = {}
+    local function createPage(name)
+        local page = new("ScrollingFrame",{
+            Parent=contentBg,
+            Size=UDim2.new(1,-12,1,-12),
+            Position=UDim2.new(0,6,0,6),
+            BackgroundTransparency=1,
+            ScrollBarThickness=4,
+            ScrollBarImageColor3=colors.primary,
+            BorderSizePixel=0,
+            CanvasSize=UDim2.new(0,0,0,0),
+            AutomaticCanvasSize=Enum.AutomaticSize.Y,
+            Visible=false,
+            ClipsDescendants=true,
+            ZIndex=5
+        })
+        new("UIListLayout",{
+            Parent=page,
+            Padding=UDim.new(0,10),
+            SortOrder=Enum.SortOrder.LayoutOrder,
+            HorizontalAlignment=Enum.HorizontalAlignment.Center
+        })
+        new("UIPadding",{ Parent=page, PaddingTop=UDim.new(0,6), PaddingBottom=UDim.new(0,6), PaddingLeft=UDim.new(0,3), PaddingRight=UDim.new(0,3) })
+        pages[name] = page
+        return page
     end
-    
-    pages[pageName].Visible = true
-    currentPage = pageName
-end
 
-local btnMain = createNavButton("Main", "🏠", "Main")
-local btnTeleport = createNavButton("Teleport", "🌍", "Teleport")
-local btnShop = createNavButton("Shop Features", "🛒", "Shop")
-local btnSettings = createNavButton("Settings", "⚙️", "Settings")
-local btnInfo = createNavButton("Info", "ℹ️", "Info")
+    local mainPage = createPage("Main")
+    local teleportPage = createPage("Teleport")
+    local shopPage = createPage("Shop")
+    local settingsPage = createPage("Settings")
+    local infoPage = createPage("Info")
+    mainPage.Visible = true
 
-btnMain.MouseButton1Click:Connect(function() switchPage("Main") end)
-btnTeleport.MouseButton1Click:Connect(function() switchPage("Teleport") end)
-btnShop.MouseButton1Click:Connect(function() switchPage("Shop") end)
-btnSettings.MouseButton1Click:Connect(function() switchPage("Settings") end)
-btnInfo.MouseButton1Click:Connect(function() switchPage("Info") end)
+    -- Nav button creator (lightweight)
+    local currentPage = "Main"
+    local navButtons = {}
+    local function createNavButton(text, icon, page)
+        local btn = new("TextButton",{
+            Parent=navContainer,
+            Size=UDim2.new(1,0,0,38),
+            BackgroundColor3=colors.glass,
+            BackgroundTransparency=page == currentPage and 0.1 or 0.5,
+            BorderSizePixel=0,
+            Text="",
+            AutoButtonColor=false,
+            ZIndex=7
+        })
+        new("UICorner",{Parent=btn,CornerRadius=UDim.new(0,10)})
+        cloneStroke(btn)
 
--- Compact Toggle (smaller)
-local function makeToggle(parent,label,callback)
-    local f=new("Frame",{
-        Parent=parent,
-        Size=UDim2.new(1,0,0,32),
-        BackgroundTransparency=1,
-        ZIndex=6
-    })
-    
-    new("TextLabel",{
-        Parent=f,
-        Text=label,
-        Size=UDim2.new(0.6,0,1,0),
-        TextXAlignment=Enum.TextXAlignment.Left,
-        BackgroundTransparency=1,
-        TextColor3=colors.text,
-        Font=Enum.Font.GothamMedium,
-        TextSize=10,
-        TextWrapped=true,
-        ZIndex=7
-    })
-    
-    local toggleBg=new("Frame",{
-        Parent=f,
-        Size=UDim2.new(0,42,0,22),
-        Position=UDim2.new(1,-44,0.5,-11),
-        BackgroundColor3=colors.border,
-        BackgroundTransparency=0.3,
-        BorderSizePixel=0,
-        ZIndex=7
-    })
-    new("UICorner",{Parent=toggleBg,CornerRadius=UDim.new(1,0)})
-    new("UIStroke",{Parent=toggleBg,Color=colors.border,Thickness=1.2,Transparency=0.5})
-    
-    local toggleCircle=new("Frame",{
-        Parent=toggleBg,
-        Size=UDim2.new(0,16,0,16),
-        Position=UDim2.new(0,3,0.5,-8),
-        BackgroundColor3=colors.textDim,
-        BorderSizePixel=0,
-        ZIndex=8
-    })
-    new("UICorner",{Parent=toggleCircle,CornerRadius=UDim.new(1,0)})
-    
-    local btn=new("TextButton",{
-        Parent=toggleBg,
-        Size=UDim2.new(1,0,1,0),
-        BackgroundTransparency=1,
-        Text="",
-        ZIndex=9
-    })
-    
-    local on=false
-    btn.MouseButton1Click:Connect(function()
-        on=not on
-        TweenService:Create(toggleBg,TweenInfo.new(0.25),{
-            BackgroundColor3=on and colors.primary or colors.border,
-            BackgroundTransparency=on and 0 or 0.3
-        }):Play()
-        TweenService:Create(toggleCircle,TweenInfo.new(0.3,Enum.EasingStyle.Back),{
-            Position=on and UDim2.new(1,-19,0.5,-8) or UDim2.new(0,3,0.5,-8),
-            BackgroundColor3=on and colors.text or colors.textDim
-        }):Play()
-        callback(on)
-    end)
-end
+        local iconLabel = new("TextLabel",{ Parent=btn, Size=UDim2.new(0,28,1,0), Position=UDim2.new(0,6,0,0), BackgroundTransparency=1, Text=icon, Font=Enum.Font.GothamBold, TextSize=15, TextColor3=page == currentPage and colors.primary or colors.textDim, ZIndex=8 })
+        local textLabel = new("TextLabel",{ Parent=btn, Size=UDim2.new(1,-38,1,0), Position=UDim2.new(0,34,0,0), BackgroundTransparency=1, Text=text, Font=Enum.Font.GothamSemibold, TextSize=11, TextColor3=page == currentPage and colors.text or colors.textDim, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=8 })
 
--- Compact Slider (smaller)
-local function makeSlider(parent,label,min,max,def,onChange)
-    local f=new("Frame",{
-        Parent=parent,
-        Size=UDim2.new(1,0,0,45),
-        BackgroundTransparency=1,
-        ClipsDescendants=true,
-        ZIndex=6
-    })
-    
-    local lbl=new("TextLabel",{
-        Parent=f,
-        Text=("%s: %.2fs"):format(label,def),
-        Size=UDim2.new(1,0,0,16),
-        BackgroundTransparency=1,
-        TextColor3=colors.text,
-        TextXAlignment=Enum.TextXAlignment.Left,
-        Font=Enum.Font.GothamMedium,
-        TextSize=10,
-        ZIndex=7
-    })
-    
-    local bar=new("Frame",{
-        Parent=f,
-        Size=UDim2.new(1,-6,0,8),
-        Position=UDim2.new(0,3,0,26),
-        BackgroundColor3=colors.glass,
-        BackgroundTransparency=0.4,
-        BorderSizePixel=0,
-        ClipsDescendants=false,
-        ZIndex=7
-    })
-    new("UICorner",{Parent=bar,CornerRadius=UDim.new(1,0)})
-    new("UIStroke",{Parent=bar,Color=colors.border,Thickness=1.2,Transparency=0.7})
-    
-    local fill=new("Frame",{
-        Parent=bar,
-        Size=UDim2.new((def-min)/(max-min),0,1,0),
-        BackgroundColor3=colors.primary,
-        BorderSizePixel=0,
-        ZIndex=8
-    })
-    new("UICorner",{Parent=fill,CornerRadius=UDim.new(1,0)})
-    
-    local knob=new("Frame",{
-        Parent=bar,
-        Size=UDim2.new(0,16,0,16),
-        Position=UDim2.new((def-min)/(max-min),-8,0.5,-8),
-        BackgroundColor3=colors.text,
-        BorderSizePixel=0,
-        ZIndex=9
-    })
-    new("UICorner",{Parent=knob,CornerRadius=UDim.new(1,0)})
-    new("UIStroke",{Parent=knob,Color=colors.primary,Thickness=1.5,Transparency=0.4})
-    
-    local dragging=false
-    local function update(x)
-        local rel=math.clamp((x-bar.AbsolutePosition.X)/math.max(bar.AbsoluteSize.X,1),0,1)
-        local val=min+(max-min)*rel
-        fill.Size=UDim2.new(rel,0,1,0)
-        knob.Position=UDim2.new(rel,-8,0.5,-8)
-        lbl.Text=("%s: %.2fs"):format(label,val)
-        onChange(val)
+        navButtons[page] = {btn=btn, icon=iconLabel, text=textLabel}
+        btn.MouseButton1Click:Connect(function()
+            if currentPage == page then return end
+            for _, p in pairs(pages) do p.Visible = false end
+            for name, btnData in pairs(navButtons) do
+                local isActive = name == page
+                btnData.btn.BackgroundTransparency = isActive and 0.1 or 0.5
+                btnData.icon.TextColor3 = isActive and colors.primary or colors.textDim
+                btnData.text.TextColor3 = isActive and colors.text or colors.textDim
+            end
+            pages[page].Visible = true
+            currentPage = page
+        end)
+        return btn
     end
-    
-    bar.InputBegan:Connect(function(i)
-        if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then 
-            dragging=true 
-            update(i.Position.X)
-        end 
-    end)
-    
-    UserInputService.InputChanged:Connect(function(i)
-        if dragging and (i.UserInputType==Enum.UserInputType.MouseMovement or i.UserInputType==Enum.UserInputType.Touch) then 
-            update(i.Position.X)
-        end 
-    end)
-    
-    UserInputService.InputEnded:Connect(function(i)
-        if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then dragging=false end 
-    end)
-end
 
--- Compact Panel (smaller)
-local function makePanel(parent,title,icon)
-    local p=new("Frame",{
-        Parent=parent,
-        Size=UDim2.new(0.96,0,0,50),
-        BackgroundColor3=colors.glass,
-        BackgroundTransparency=0.3,
-        BorderSizePixel=0,
-        ClipsDescendants=true,
-        AutomaticSize=Enum.AutomaticSize.Y,
-        ZIndex=6
-    })
-    new("UICorner",{Parent=p,CornerRadius=UDim.new(0,12)})
-    new("UIStroke",{Parent=p,Color=colors.primary,Thickness=1.2,Transparency=0.6})
-    
-    local header=new("Frame",{
-        Parent=p,
-        Size=UDim2.new(1,0,0,35),
-        BackgroundTransparency=1,
-        BorderSizePixel=0,
-        ZIndex=7
-    })
-    
-    new("TextLabel",{
-        Parent=header,
-        Text=icon.." "..title,
-        Size=UDim2.new(1,-16,1,0),
-        Position=UDim2.new(0,8,0,0),
-        Font=Enum.Font.GothamBold,
-        TextSize=12,
-        TextColor3=colors.text,
-        BackgroundTransparency=1,
-        TextXAlignment=Enum.TextXAlignment.Left,
-        ZIndex=8
-    })
-    
-    local container=new("Frame",{
-        Parent=p,
-        Size=UDim2.new(1,-16,0,0),
-        Position=UDim2.new(0,8,0,38),
-        BackgroundTransparency=1,
-        ClipsDescendants=false,
-        AutomaticSize=Enum.AutomaticSize.Y,
-        ZIndex=7
-    })
-    new("UIListLayout",{
-        Parent=container,
-        Padding=UDim.new(0,6),
-        SortOrder=Enum.SortOrder.LayoutOrder
-    })
-    new("UIPadding",{
-        Parent=container,
-        PaddingBottom=UDim.new(0,8)
-    })
-    
-    return container
-end
+    local btnMain = createNavButton("Main", "🏠", "Main")
+    local btnTeleport = createNavButton("Teleport", "🌍", "Teleport")
+    local btnShop = createNavButton("Shop Features", "🛒", "Shop")
+    local btnSettings = createNavButton("Settings", "⚙️", "Settings")
+    local btnInfo = createNavButton("Info", "ℹ️", "Info")
 
--- IMPROVED DROPDOWN FUNCTION
-local function makeDropdown(parent, title, icon, items, onSelect, uniqueId)
-    local dropdownFrame = new("Frame", {
-        Parent = parent,
-        Size = UDim2.new(0.96, 0, 0, 44),
-        BackgroundColor3 = colors.glass,
-        BackgroundTransparency = 0.25,
-        BorderSizePixel = 0,
-        AutomaticSize = Enum.AutomaticSize.Y,
-        ZIndex = 6,
-        Name = uniqueId or "Dropdown"
-    })
-    new("UICorner", {Parent = dropdownFrame, CornerRadius = UDim.new(0, 14)})
-    
-    local dropStroke = new("UIStroke", {
-        Parent = dropdownFrame, 
-        Color = colors.primary, 
-        Thickness = 1.5, 
-        Transparency = 0.5
-    })
-    
-    -- Gradient background
-    local dropGradient = new("UIGradient", {
-        Parent = dropdownFrame,
-        Color = ColorSequence.new{
-            ColorSequenceKeypoint.new(0, colors.glass),
-            ColorSequenceKeypoint.new(1, colors.darker)
-        },
-        Rotation = 45,
-        Transparency = NumberSequence.new(0.3)
-    })
-    
-    local header = new("TextButton", {
-        Parent = dropdownFrame,
-        Size = UDim2.new(1, -16, 0, 38),
-        Position = UDim2.new(0, 8, 0, 3),
-        BackgroundTransparency = 1,
-        Text = "",
-        AutoButtonColor = false,
-        ZIndex = 7
-    })
-    
-    local iconLabel = new("TextLabel", {
-        Parent = header,
-        Text = icon,
-        Size = UDim2.new(0, 24, 1, 0),
-        BackgroundTransparency = 1,
-        Font = Enum.Font.GothamBold,
-        TextSize = 14,
-        TextColor3 = colors.primary,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 8
-    })
-    
-    local headerLabel = new("TextLabel", {
-        Parent = header,
-        Text = title,
-        Size = UDim2.new(1, -50, 1, 0),
-        Position = UDim2.new(0, 28, 0, 0),
-        BackgroundTransparency = 1,
-        Font = Enum.Font.GothamBold,
-        TextSize = 11,
-        TextColor3 = colors.text,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 8
-    })
-    
-    local arrow = new("TextLabel", {
-        Parent = header,
-        Text = "▼",
-        Size = UDim2.new(0, 20, 1, 0),
-        Position = UDim2.new(1, -20, 0, 0),
-        BackgroundTransparency = 1,
-        Font = Enum.Font.GothamBold,
-        TextSize = 11,
-        TextColor3 = colors.primary,
-        ZIndex = 8
-    })
-    
-    local listContainer = new("ScrollingFrame", {
-        Parent = dropdownFrame,
-        Size = UDim2.new(1, -16, 0, 0),
-        Position = UDim2.new(0, 8, 0, 46),
-        BackgroundTransparency = 1,
-        Visible = false,
-        AutomaticCanvasSize = Enum.AutomaticSize.Y,
-        CanvasSize = UDim2.new(0, 0, 0, 0),
-        ScrollBarThickness = 3,
-        ScrollBarImageColor3 = colors.primary,
-        BorderSizePixel = 0,
-        ClipsDescendants = true,
-        ZIndex = 10
-    })
-    new("UIListLayout", {Parent = listContainer, Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder})
-    new("UIPadding", {Parent = listContainer, PaddingBottom = UDim.new(0, 8)})
-    
-    local isOpen = false
-    local selectedItem = nil
-    
-    header.MouseButton1Click:Connect(function()
-        isOpen = not isOpen
-        listContainer.Visible = isOpen
-        
-        -- Animate arrow
-        TweenService:Create(arrow, TweenInfo.new(0.25, Enum.EasingStyle.Back), {
-            Rotation = isOpen and 180 or 0
-        }):Play()
-        
-        -- Animate dropdown
-        TweenService:Create(dropStroke, TweenInfo.new(0.2), {
-            Color = isOpen and colors.success or colors.primary,
-            Thickness = isOpen and 2 or 1.5,
-            Transparency = isOpen and 0.3 or 0.5
-        }):Play()
-        
-        -- Limit height for scrolling
-        if isOpen and #items > 6 then
-            listContainer.Size = UDim2.new(1, -16, 0, 180)
+    -- Remove loading placeholder now that pages exist; keep until modules ready below
+    loadingLabel.Text = "🔄 Loading modules... some features will appear shortly."
+
+    -- Utility creators (toggle, slider, panel) - same logic as before but created now to avoid heavy upfront creation
+    local function makePanel(parent,title,icon)
+        local p=new("Frame",{ Parent=parent, Size=UDim2.new(0.96,0,0,50), BackgroundColor3=colors.glass, BackgroundTransparency=0.3, BorderSizePixel=0, ClipsDescendants=true, AutomaticSize=Enum.AutomaticSize.Y, ZIndex=6 })
+        new("UICorner",{Parent=p,CornerRadius=UDim.new(0,12)})
+        cloneStroke(p)
+        local header=new("Frame",{ Parent=p, Size=UDim2.new(1,0,0,35), BackgroundTransparency=1, BorderSizePixel=0, ZIndex=7 })
+        new("TextLabel",{ Parent=header, Text=icon.." "..title, Size=UDim2.new(1,-16,1,0), Position=UDim2.new(0,8,0,0), Font=Enum.Font.GothamBold, TextSize=12, TextColor3=colors.text, BackgroundTransparency=1, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=8 })
+        local container=new("Frame",{ Parent=p, Size=UDim2.new(1,-16,0,0), Position=UDim2.new(0,8,0,38), BackgroundTransparency=1, ClipsDescendants=false, AutomaticSize=Enum.AutomaticSize.Y, ZIndex=7 })
+        new("UIListLayout",{ Parent=container, Padding=UDim.new(0,6), SortOrder=Enum.SortOrder.LayoutOrder })
+        new("UIPadding",{ Parent=container, PaddingBottom=UDim.new(0,8) })
+        return container
+    end
+
+    local function makeToggle(parent,label,callback)
+        local f=new("Frame",{ Parent=parent, Size=UDim2.new(1,0,0,32), BackgroundTransparency=1, ZIndex=6 })
+        new("TextLabel",{ Parent=f, Text=label, Size=UDim2.new(0.6,0,1,0), TextXAlignment=Enum.TextXAlignment.Left, BackgroundTransparency=1, TextColor3=colors.text, Font=Enum.Font.GothamMedium, TextSize=10, TextWrapped=true, ZIndex=7 })
+        local toggleBg=new("Frame",{ Parent=f, Size=UDim2.new(0,42,0,22), Position=UDim2.new(1,-44,0.5,-11), BackgroundColor3=colors.border, BackgroundTransparency=0.3, BorderSizePixel=0, ZIndex=7 })
+        new("UICorner",{Parent=toggleBg,CornerRadius=UDim.new(1,0)})
+        cloneStroke(toggleBg)
+        local toggleCircle=new("Frame",{ Parent=toggleBg, Size=UDim2.new(0,16,0,16), Position=UDim2.new(0,3,0.5,-8), BackgroundColor3=colors.textDim, BorderSizePixel=0, ZIndex=8 })
+        new("UICorner",{Parent=toggleCircle,CornerRadius=UDim.new(1,0)})
+        local btn=new("TextButton",{ Parent=toggleBg, Size=UDim2.new(1,0,1,0), BackgroundTransparency=1, Text="", ZIndex=9 })
+        local on=false
+        btn.MouseButton1Click:Connect(function()
+            on = not on
+            fastTween(toggleBg, {BackgroundColor3 = on and colors.primary or colors.border, BackgroundTransparency = on and 0 or 0.3}, 0.18)
+            fastTween(toggleCircle, {Position = on and UDim2.new(1,-19,0.5,-8) or UDim2.new(0,3,0.5,-8), BackgroundColor3 = on and colors.text or colors.textDim}, 0.25)
+            pcall(function() callback(on) end)
+        end)
+    end
+
+    local function makeSlider(parent,label,min,max,def,onChange)
+        local f=new("Frame",{ Parent=parent, Size=UDim2.new(1,0,0,45), BackgroundTransparency=1, ClipsDescendants=true, ZIndex=6 })
+        local lbl=new("TextLabel",{ Parent=f, Text=("%s: %.2fs"):format(label,def), Size=UDim2.new(1,0,0,16), BackgroundTransparency=1, TextColor3=colors.text, TextXAlignment=Enum.TextXAlignment.Left, Font=Enum.Font.GothamMedium, TextSize=10, ZIndex=7 })
+        local bar=new("Frame",{ Parent=f, Size=UDim2.new(1,-6,0,8), Position=UDim2.new(0,3,0,26), BackgroundColor3=colors.glass, BackgroundTransparency=0.4, BorderSizePixel=0, ClipsDescendants=false, ZIndex=7 })
+        new("UICorner",{Parent=bar,CornerRadius=UDim.new(1,0)})
+        cloneStroke(bar)
+        local fill=new("Frame",{ Parent=bar, Size=UDim2.new((def-min)/(max-min),0,1,0), BackgroundColor3=colors.primary, BorderSizePixel=0, ZIndex=8 })
+        new("UICorner",{Parent=fill,CornerRadius=UDim.new(1,0)})
+        local knob=new("Frame",{ Parent=bar, Size=UDim2.new(0,16,0,16), Position=UDim2.new((def-min)/(max-min),-8,0.5,-8), BackgroundColor3=colors.text, BorderSizePixel=0, ZIndex=9 })
+        new("UICorner",{Parent=knob,CornerRadius=UDim.new(1,0)})
+        new("UIStroke",{Parent=knob,Color=colors.primary,Thickness=1.5,Transparency=0.4})
+        local dragging=false
+        local function update(x)
+            local rel=math.clamp((x-bar.AbsolutePosition.X)/math.max(bar.AbsoluteSize.X,1),0,1)
+            local val=min+(max-min)*rel
+            fill.Size=UDim2.new(rel,0,1,0)
+            knob.Position=UDim2.new(rel,-8,0.5,-8)
+            lbl.Text=("%s: %.2fs"):format(label,val)
+            pcall(function() onChange(val) end)
+        end
+        bar.InputBegan:Connect(function(i)
+            if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then dragging=true update(i.Position.X) end
+        end)
+        UserInputService.InputChanged:Connect(function(i)
+            if dragging and (i.UserInputType==Enum.UserInputType.MouseMovement or i.UserInputType==Enum.UserInputType.Touch) then update(i.Position.X) end
+        end)
+        UserInputService.InputEnded:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then dragging=false end end)
+    end
+
+    -- Build main page controls (panels + toggles)
+    local pnl1 = makePanel(mainPage,"⚡ Instant Fishing","")
+    makeToggle(pnl1,"Enable Instant Fishing",function(on) pcall(function() instant.Start(on) end) end)
+    makeSlider(pnl1,"Fishing Delay",0.01,5.0,1.30,function(v) pcall(function() instant.Settings.MaxWaitTime = v end) end)
+    makeSlider(pnl1,"Cancel Delay",0.01,1.5,0.19,function(v) pcall(function() instant.Settings.CancelDelay = v end) end)
+
+    local pnl2 = makePanel(mainPage,"🚀 Instant 2x Speed","")
+    makeToggle(pnl2,"Enable Instant 2x Speed",function(on) pcall(function() instant2x.Start(on) end) end)
+    makeSlider(pnl2,"Fishing Delay",0,5.0,0.30,function(v) pcall(function() instant2x.Settings.FishingDelay = v end) end)
+    makeSlider(pnl2,"Cancel Delay",0.01,1.5,0.19,function(v) pcall(function() instant2x.Settings.CancelDelay = v end) end)
+
+    -- Teleport dropdowns (build lightweight dropdowns)
+    local function makeDropdown(parent, title, icon, items, onSelect)
+        local dropdownFrame = new("Frame",{ Parent = parent, Size = UDim2.new(0.96, 0, 0, 44), BackgroundColor3 = colors.glass, BackgroundTransparency = 0.25, BorderSizePixel = 0, AutomaticSize = Enum.AutomaticSize.Y, ZIndex = 6 })
+        new("UICorner",{Parent = dropdownFrame, CornerRadius = UDim.new(0, 14)})
+        cloneStroke(dropdownFrame)
+        local header = new("TextButton",{ Parent = dropdownFrame, Size = UDim2.new(1, -16, 0, 38), Position = UDim2.new(0, 8, 0, 3), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 7 })
+        new("TextLabel",{ Parent = header, Text = icon.." "..title, Size = UDim2.new(1, -16, 1, 0), BackgroundTransparency = 1, Font = Enum.Font.GothamBold, TextSize = 11, TextColor3 = colors.text, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 8 })
+        local listContainer = new("Frame",{ Parent = dropdownFrame, Size = UDim2.new(1, -16, 0, 0), Position = UDim2.new(0, 8, 0, 46), BackgroundTransparency = 1, Visible = false, ZIndex = 10 })
+        new("UIListLayout",{ Parent = listContainer, Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder })
+        local isOpen = false
+        header.MouseButton1Click:Connect(function()
+            isOpen = not isOpen
+            listContainer.Visible = isOpen
+            if isOpen then
+                listContainer.Size = UDim2.new(1, -16, 0, math.min(#items * 32, 180))
+            else
+                listContainer.Size = UDim2.new(1, -16, 0, 0)
+            end
+        end)
+        for _, itemName in ipairs(items) do
+            local itemBtn = new("TextButton",{ Parent = listContainer, Size = UDim2.new(1, 0, 0, 32), BackgroundTransparency = 0.4, BorderSizePixel = 0, Text = itemName, Font = Enum.Font.GothamMedium, TextSize = 10, TextColor3 = colors.textDim, AutoButtonColor=false, ZIndex = 11 })
+            new("UICorner",{Parent=itemBtn,CornerRadius=UDim.new(0,9)})
+            itemBtn.MouseButton1Click:Connect(function()
+                pcall(function() onSelect(itemName) end)
+                isOpen = false
+                listContainer.Visible = false
+            end)
+        end
+        return dropdownFrame
+    end
+
+    -- Teleport locations: if TeleportModule not loaded yet, show placeholder list; refresh later
+    local function getLocationItems()
+        local out = {}
+        local ok, locs = pcall(function() return TeleportModule and TeleportModule.Locations end)
+        if ok and locs then
+            for name,_ in pairs(locs) do table.insert(out, name) end
+            table.sort(out)
         else
-            listContainer.Size = UDim2.new(1, -16, 0, math.min(#items * 35, 210))
+            table.insert(out, "Loading locations...")
         end
-    end)
-    
-    local itemButtons = {}
-    
-    local function resetAllButtons()
-        for _, btn in pairs(itemButtons) do
-            TweenService:Create(btn, TweenInfo.new(0.2), {
-                BackgroundColor3 = colors.darker,
-                BackgroundTransparency = 0.4,
-                TextColor3 = colors.textDim
-            }):Play()
-            if btn:FindFirstChild("UIStroke") then
-                btn.UIStroke.Color = colors.border
-                btn.UIStroke.Transparency = 0.7
-            end
-        end
+        return out
     end
-    
-    for _, itemName in ipairs(items) do
-        local itemBtn = new("TextButton", {
-            Parent = listContainer,
-            Size = UDim2.new(1, 0, 0, 32),
-            BackgroundColor3 = colors.darker,
-            BackgroundTransparency = 0.4,
-            BorderSizePixel = 0,
-            Text = "",
-            AutoButtonColor = false,
-            ZIndex = 11
-        })
-        new("UICorner", {Parent = itemBtn, CornerRadius = UDim.new(0, 9)})
-        
-        local btnStroke = new("UIStroke", {
-            Parent = itemBtn, 
-            Color = colors.border, 
-            Thickness = 1.2, 
-            Transparency = 0.7
-        })
-        
-        local btnIcon = new("TextLabel", {
-            Parent = itemBtn,
-            Text = "◆",
-            Size = UDim2.new(0, 20, 1, 0),
-            Position = UDim2.new(0, 8, 0, 0),
-            BackgroundTransparency = 1,
-            Font = Enum.Font.GothamBold,
-            TextSize = 9,
-            TextColor3 = colors.primary,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            ZIndex = 12
-        })
-        
-        local btnLabel = new("TextLabel", {
-            Parent = itemBtn,
-            Text = itemName,
-            Size = UDim2.new(1, -35, 1, 0),
-            Position = UDim2.new(0, 28, 0, 0),
-            BackgroundTransparency = 1,
-            Font = Enum.Font.GothamMedium,
-            TextSize = 10,
-            TextColor3 = colors.textDim,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            TextTruncate = Enum.TextTruncate.AtEnd,
-            ZIndex = 12
-        })
-        
-        table.insert(itemButtons, itemBtn)
-        
-        itemBtn.MouseEnter:Connect(function()
-            if selectedItem ~= itemName then
-                TweenService:Create(itemBtn, TweenInfo.new(0.15), {
-                    BackgroundColor3 = colors.primary,
-                    BackgroundTransparency = 0.15,
-                }):Play()
-                TweenService:Create(btnLabel, TweenInfo.new(0.15), {
-                    TextColor3 = colors.text
-                }):Play()
-                TweenService:Create(btnIcon, TweenInfo.new(0.15), {
-                    TextColor3 = colors.text
-                }):Play()
-                TweenService:Create(btnStroke, TweenInfo.new(0.15), {
-                    Color = colors.primary,
-                    Transparency = 0.4
-                }):Play()
-            end
-        end)
-        
-        itemBtn.MouseLeave:Connect(function()
-            if selectedItem ~= itemName then
-                TweenService:Create(itemBtn, TweenInfo.new(0.15), {
-                    BackgroundColor3 = colors.darker,
-                    BackgroundTransparency = 0.4,
-                }):Play()
-                TweenService:Create(btnLabel, TweenInfo.new(0.15), {
-                    TextColor3 = colors.textDim
-                }):Play()
-                TweenService:Create(btnIcon, TweenInfo.new(0.15), {
-                    TextColor3 = colors.primary
-                }):Play()
-                TweenService:Create(btnStroke, TweenInfo.new(0.15), {
-                    Color = colors.border,
-                    Transparency = 0.7
-                }):Play()
-            end
-        end)
-        
-        itemBtn.MouseButton1Click:Connect(function()
-            resetAllButtons()
-            selectedItem = itemName
-            onSelect(itemName)
-            
-            -- Close dropdown after selection
-            task.wait(0.1)
-            isOpen = false
-            listContainer.Visible = false
-            TweenService:Create(arrow, TweenInfo.new(0.25, Enum.EasingStyle.Back), {
-                Rotation = 0
-            }):Play()
-            TweenService:Create(dropStroke, TweenInfo.new(0.2), {
-                Color = colors.primary,
-                Thickness = 1.5,
-                Transparency = 0.5
-            }):Play()
-        end)
-    end
-    
-    return dropdownFrame
-end
 
--- Main Page Content
-local pnl1=makePanel(mainPage,"⚡ Instant Fishing","")
-makeToggle(pnl1,"Enable Instant Fishing",function(on) if on then instant.Start() else instant.Stop() end end)
-makeSlider(pnl1,"Fishing Delay",0.01,5.0,1.30,function(v) instant.Settings.MaxWaitTime=v end)
-makeSlider(pnl1,"Cancel Delay",0.01,1.5,0.19,function(v) instant.Settings.CancelDelay=v end)
-
-local pnl2=makePanel(mainPage,"🚀 Instant 2x Speed","")
-makeToggle(pnl2,"Enable Instant 2x Speed",function(on) if on then instant2x.Start() else instant2x.Stop() end end)
-makeSlider(pnl2,"Fishing Delay",0,5.0,0.3,function(v) instant2x.Settings.FishingDelay=v end)
-makeSlider(pnl2,"Cancel Delay",0.01,1.5,0.19,function(v) instant2x.Settings.CancelDelay=v end)
-
--- Teleport Page with Dropdowns
-local locationItems = {}
-for name, _ in pairs(TeleportModule.Locations) do
-    table.insert(locationItems, name)
-end
-table.sort(locationItems)
-
-makeDropdown(teleportPage, "Teleport to Location", "📍", locationItems, function(selectedLocation)
-    TeleportModule.TeleportTo(selectedLocation)
-    print("Teleporting to: " .. selectedLocation)
-end)
-
-local playerItems = {}
-for _, player in ipairs(Players:GetPlayers()) do
-    if player ~= localPlayer then
-        table.insert(playerItems, player.Name)
-    end
-end
-table.sort(playerItems)
-
-makeDropdown(teleportPage, "Teleport to Player", "👤", playerItems, function(selectedPlayer)
-    TeleportToPlayer.TeleportTo(selectedPlayer)
-    print("Teleporting to player: " .. selectedPlayer)
-end)
-
--- === Dynamic Update for Player Dropdown ===
-local function refreshPlayerList()
-    table.clear(playerItems)
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= localPlayer then
-            table.insert(playerItems, player.Name)
-        end
-    end
-    table.sort(playerItems)
-end
-
--- Refresh list when player joins or leaves
-Players.PlayerAdded:Connect(function()
-    refreshPlayerList()
-end)
-Players.PlayerRemoving:Connect(function()
-    refreshPlayerList()
-end)
-
--- === AUTO SELL BUTTON SECTION ===
-
--- 🧩 Compact Button (consistent with Keaby style)
-local function makeButton(parent, label, callback)
-    local btnFrame = new("Frame", {
-        Parent = parent,
-        Size = UDim2.new(0.96, 0, 0, 40),
-        BackgroundColor3 = colors.darker,
-        BackgroundTransparency = 0.25,
-        BorderSizePixel = 0,
-        ZIndex = 7
-    })
-    new("UICorner", { Parent = btnFrame, CornerRadius = UDim.new(0, 10) })
-    new("UIStroke", { Parent = btnFrame, Color = colors.border, Thickness = 1.2, Transparency = 0.6 })
-
-    local button = new("TextButton", {
-        Parent = btnFrame,
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1,
-        Text = label,
-        Font = Enum.Font.GothamBold,
-        TextSize = 13,
-        TextColor3 = colors.text,
-        AutoButtonColor = false,
-        ZIndex = 8
-    })
-
-    -- Hover effect
-    button.MouseEnter:Connect(function()
-        TweenService:Create(btnFrame, TweenInfo.new(0.15), {
-            BackgroundTransparency = 0,
-            BackgroundColor3 = colors.primary
-        }):Play()
-        TweenService:Create(button, TweenInfo.new(0.15), {
-            TextColor3 = colors.dark
-        }):Play()
-    end)
-    button.MouseLeave:Connect(function()
-        TweenService:Create(btnFrame, TweenInfo.new(0.15), {
-            BackgroundTransparency = 0.25,
-            BackgroundColor3 = colors.darker
-        }):Play()
-        TweenService:Create(button, TweenInfo.new(0.15), {
-            TextColor3 = colors.text
-        }):Play()
-    end)
-
-    button.MouseButton1Click:Connect(function()
+    makeDropdown(teleportPage, "Teleport to Location", "📍", getLocationItems(), function(selectedLocation)
         pcall(function()
-            callback()
+            if TeleportModule and TeleportModule.TeleportTo then TeleportModule.TeleportTo(selectedLocation) end
         end)
     end)
 
-    return btnFrame
-end
-
-
--- === SHOP PANEL & BUTTON ===
-local pnlSell = makePanel(shopPage, "💰 Auto Sell System", "")
-
-makeButton(pnlSell, "Sell All", function()
-	if AutoSell and AutoSell.SellOnce then
-		print("🟢 [GUI] Sell All button pressed")
-		AutoSell.SellOnce()
-	else
-		warn("❌ AutoSell module not loaded or missing SellOnce()")
-	end
-end)
-
--- 💡 Compact Switch Button (Keaby style)
-local function makeSwitch(parent, label, default, callback)
-    local frame = new("Frame", {
-        Parent = parent,
-        Size = UDim2.new(0.96, 0, 0, 40),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-    })
-
-    new("TextLabel", {
-        Parent = frame,
-        Size = UDim2.new(0.7, 0, 1, 0),
-        BackgroundTransparency = 1,
-        Text = label,
-        Font = Enum.Font.GothamBold,
-        TextSize = 13,
-        TextColor3 = colors.text,
-        TextXAlignment = Enum.TextXAlignment.Left,
-    })
-
-    local switch = new("Frame", {
-        Parent = frame,
-        AnchorPoint = Vector2.new(1, 0.5),
-        Position = UDim2.new(1, -5, 0.5, 0),
-        Size = UDim2.new(0, 46, 0, 24),
-        BackgroundColor3 = default and colors.primary or Color3.fromRGB(60, 60, 60),
-        BorderSizePixel = 0,
-    })
-    new("UICorner", { Parent = switch, CornerRadius = UDim.new(1, 0) })
-
-    local knob = new("Frame", {
-        Parent = switch,
-        Size = UDim2.new(0, 20, 0, 20),
-        Position = default and UDim2.new(1, -22, 0.5, 0) or UDim2.new(0, 2, 0.5, 0),
-        AnchorPoint = Vector2.new(0, 0.5),
-        BackgroundColor3 = Color3.fromRGB(220, 220, 220),
-        BorderSizePixel = 0,
-    })
-    new("UICorner", { Parent = knob, CornerRadius = UDim.new(1, 0) })
-
-    local state = default
-
-    local function setState(on)
-        state = on
-        TweenService:Create(switch, TweenInfo.new(0.2), {
-            BackgroundColor3 = on and colors.primary or Color3.fromRGB(60, 60, 60)
-        }):Play()
-        TweenService:Create(knob, TweenInfo.new(0.2), {
-            Position = on and UDim2.new(1, -22, 0.5, 0) or UDim2.new(0, 2, 0.5, 0)
-        }):Play()
-
-        pcall(function() callback(on) end)
+    -- Player teleport dropdown
+    local function getPlayerItems()
+        local out = {}
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= localPlayer then table.insert(out, player.Name) end
+        end
+        table.sort(out)
+        if #out == 0 then table.insert(out, "No players") end
+        return out
     end
 
-    local button = new("TextButton", {
-        Parent = switch,
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1,
-        Text = ""
-    })
-
-    button.MouseButton1Click:Connect(function()
-        setState(not state)
+    makeDropdown(teleportPage, "Teleport to Player", "👤", getPlayerItems(), function(selectedPlayer)
+        pcall(function() if TeleportToPlayer and TeleportToPlayer.TeleportTo then TeleportToPlayer.TeleportTo(selectedPlayer) end end)
     end)
 
-    return frame
-end
+    -- auto sell panel
+    local pnlSell = makePanel(shopPage, "💰 Auto Sell System", "")
+    local sellBtn = new("TextButton",{ Parent = pnlSell, Size=UDim2.new(0.96,0,0,40), BackgroundTransparency=0, BackgroundColor3=colors.darker, Text="Sell All", Font=Enum.Font.GothamBold, TextSize=13, TextColor3=colors.text, ZIndex=7 })
+    new("UICorner",{Parent=sellBtn,CornerRadius=UDim.new(0,10)})
+    cloneStroke(sellBtn)
+    sellBtn.MouseButton1Click:Connect(function()
+        pcall(function() if AutoSell and AutoSell.SellOnce then AutoSell.SellOnce() else warn("AutoSell not ready") end end)
+    end)
 
--- === PANEL ===
-local pnlTimer = makePanel(shopPage, "⏰ Auto Sell Timer", "")
+    -- auto sell timer
+    local pnlTimer = makePanel(shopPage, "⏰ Auto Sell Timer", "")
+    makeSlider(pnlTimer, "Sell Interval (detik)", 1, 60, 5, function(value)
+        pcall(function() if AutoSellTimer and AutoSellTimer.SetInterval then AutoSellTimer.SetInterval(value) end end)
+    end)
+    local startBtn = new("TextButton",{ Parent = pnlTimer, Size=UDim2.new(0.96,0,0,40), BackgroundTransparency=0, BackgroundColor3=colors.darker, Text="Start Auto Sell", Font=Enum.Font.GothamBold, TextSize=13, TextColor3=colors.text, ZIndex=7 })
+    new("UICorner",{Parent=startBtn,CornerRadius=UDim.new(0,10)})
+    cloneStroke(startBtn)
+    startBtn.MouseButton1Click:Connect(function()
+        pcall(function() if AutoSellTimer and AutoSellTimer.Start then AutoSellTimer.Start(AutoSellTimer.Interval) end end)
+    end)
+    local stopBtn = new("TextButton",{ Parent = pnlTimer, Size=UDim2.new(0.96,0,0,40), BackgroundTransparency=0, BackgroundColor3=colors.darker, Text="Stop Auto Sell", Font=Enum.Font.GothamBold, TextSize=13, TextColor3=colors.text, ZIndex=7 })
+    new("UICorner",{Parent=stopBtn,CornerRadius=UDim.new(0,10)})
+    cloneStroke(stopBtn)
+    stopBtn.MouseButton1Click:Connect(function() pcall(function() if AutoSellTimer and AutoSellTimer.Stop then AutoSellTimer.Stop() end end) end)
 
--- === SLIDER UNTUK INTERVAL ===
-makeSlider(pnlTimer, "Sell Interval (detik)", 1, 60, 5, function(value)
-	AutoSellTimer.SetInterval(value)
-end)
+    -- settings: Anti-AFK + FPS dropdown
+    local settingsPnl = makePanel(settingsPage,"⚙️ General Settings","")
+    local pnlAntiAFK = makePanel(settingsPage, "Anti-AFK Protection", "🧍‍♂️")
+    makeToggle(pnlAntiAFK, "Enable Anti-AFK", function(on)
+        pcall(function() if AntiAFK and AntiAFK.Start and AntiAFK.Stop then if on then AntiAFK.Start() else AntiAFK.Stop() end end end)
+    end)
 
--- === TOMBOL START ===
-makeButton(pnlTimer, "Start Auto Sell", function()
-	if AutoSellTimer then
-		AutoSellTimer.Start(AutoSellTimer.Interval)
-	else
-		warn("❌ AutoSellTimer belum dimuat!")
-	end
-end)
-
--- === TOMBOL STOP ===
-makeButton(pnlTimer, "Stop Auto Sell", function()
-	if AutoSellTimer then
-		AutoSellTimer.Stop()
-	else
-		warn("❌ AutoSellTimer belum dimuat!")
-	end
-end)
-
--- Settings Page
-local settingsPnl = makePanel(settingsPage,"⚙️ General Settings","")
--- 🔒 Anti-AFK Panel
-local pnlAntiAFK = makePanel(settingsPage, "Anti-AFK Protection", "🧍‍♂️")
-
-makeToggle(pnlAntiAFK, "Enable Anti-AFK", function(on)
-    if on then
-        AntiAFK.Start()
-    else
-        AntiAFK.Stop()
-    end
-end)
-
--- === FPS SETTINGS PANEL ===
-local pnlFPS = makePanel(settingsPage, "🎞️ FPS Unlocker", "")
-makeDropdown(pnlFPS, "Select FPS Limit", "⚙️", {"60 FPS", "90 FPS", "120 FPS", "240 FPS"}, function(selected)
-    local fpsValue = tonumber(selected:match("%d+"))
-    if fpsValue then
-        if UnlockFPS and UnlockFPS.SetCap then
-            UnlockFPS.SetCap(fpsValue)
-            print("[KeabyGUI] FPS cap set to:", fpsValue)
-        else
-            warn("[KeabyGUI] ⚠️ UnlockFPS module not loaded or missing SetCap()")
+    -- FPS dropdown (simple)
+    local pnlFPS = makePanel(settingsPage, "🎞️ FPS Unlocker", "")
+    local fpsDropdown = makeDropdown(pnlFPS, "Select FPS Limit", "⚙️", {"60 FPS","90 FPS","120 FPS","240 FPS"}, function(selected)
+        local fpsValue = tonumber(selected:match("%d+"))
+        if fpsValue then
+            pcall(function() if UnlockFPS and UnlockFPS.SetCap then UnlockFPS.SetCap(fpsValue) else warn("UnlockFPS not ready") end end)
         end
-    else
-        warn("[KeabyGUI] Invalid FPS selection:", selected)
-    end
-end, "FPSDropdown")
+    end)
 
+    -- Info page (copy trimmed info)
+    local infoText = new("TextLabel",{ Parent=infoPage, Size=UDim2.new(0.96,0,0,260), BackgroundColor3=colors.glass, BackgroundTransparency=0.3, BorderSizePixel=0, Text="🌟 KEABY ULTRA v4.1\n\nPerformance mode enabled.", Font=Enum.Font.Gotham, TextSize=11, TextColor3=colors.textDim, TextWrapped=true, TextXAlignment=Enum.TextXAlignment.Left, TextYAlignment=Enum.TextYAlignment.Top, ZIndex=7 })
+    new("UICorner",{Parent=infoText,CornerRadius=UDim.new(0,12)})
+    cloneStroke(infoText)
 
+    -- finalize: update title to show ready status after modules loaded (poll and update once a core module appears)
+    task.spawn(function()
+        local tries = 0
+        while tries < 30 do
+            if Modules.Instant and Modules.Instant.Start ~= make_stub("Instant").Start then
+                titleLabel.Text = "Keaby • Ready"
+                loadingLabel:Destroy()
+                break
+            end
+            tries = tries + 1
+            task.wait(0.5)
+        end
+        if tries >= 30 then
+            titleLabel.Text = "Keaby (partial)"
+            loadingLabel.Text = "⚠️ Some modules failed to load. Check console."
+        end
+    end)
 
-makeToggle(settingsPnl,"Auto Save Settings",function(on) print("Auto Save:",on) end)
-makeToggle(settingsPnl,"Show Notifications",function(on) print("Notifications:",on) end)
-makeToggle(settingsPnl,"Performance Mode",function(on) print("Performance:",on) end)
+end) -- end deferred UI build
 
--- Info Page
-local infoText = new("TextLabel",{
-    Parent=infoPage,
-    Size=UDim2.new(0.96,0,0,350),
-    BackgroundColor3=colors.glass,
-    BackgroundTransparency=0.3,
-    BorderSizePixel=0,
-    Text=[[
-🌟 KEABY ULTRA v4.0
+-- ------------------------------
+-- LIGHTWEIGHT ANIMATIONS (DELAYED & LOW CPU)
+-- ------------------------------
+-- Neon gradient: delayed, slower and less frequent updates to reduce CPU use
+task.delay(1.2, function()
+    -- create a stroke/gradient but update slower
+    local neonBorder = Instance.new("UIStroke")
+    neonBorder.Parent = win
+    neonBorder.Color = colors.primary
+    neonBorder.Thickness = 2
+    neonBorder.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    local neonGradient = Instance.new("UIGradient")
+    neonGradient.Parent = neonBorder
+    neonGradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, colors.primary),
+        ColorSequenceKeypoint.new(0.33, colors.secondary),
+        ColorSequenceKeypoint.new(0.66, colors.accent),
+        ColorSequenceKeypoint.new(1, colors.primary)
+    }
+    -- rotate slowly and less frequently
+    task.spawn(function()
+        while gui and gui.Parent do
+            for i = 0, 360, 6 do
+                if not gui or not gui.Parent then break end
+                neonGradient.Rotation = i
+                task.wait(0.08) -- slower
+            end
+            task.wait(0.25)
+        end
+    end)
+end)
 
-Advanced fishing automation
-Mobile optimized interface
-
-⚡ INSTANT FISHING
-• Ultra-fast automation
-• Customizable delays
-• Safe configurations
-
-🚀 2X SPEED MODE
-• Double efficiency
-• Independent controls
-• Optimized performance
-
-🌍 TELEPORT
-• Location teleport
-• Player teleport
-• Dropdown selection
-
-⚙️ SETTINGS
-• Auto-save
-• Notifications
-• Performance mode
-
-💡 TIPS
-• Lower delay = faster (risky)
-• Higher delay = safer (slow)
-• Recommended settings:
-  1.30s fishing, 0.19s cancel
-
-🎮 CONTROLS
-• Drag top bar to move
-• (─) to minimize
-• (×) to close
-
-Created with 💎 by Keaby Team
-Mobile Edition 2024
-    ]],
-    Font=Enum.Font.Gotham,
-    TextSize=9,
-    TextColor3=colors.textDim,
-    TextWrapped=true,
-    TextXAlignment=Enum.TextXAlignment.Left,
-    TextYAlignment=Enum.TextYAlignment.Top,
-    ZIndex=7
-})
-new("UICorner",{Parent=infoText,CornerRadius=UDim.new(0,12)})
-new("UIStroke",{Parent=infoText,Color=colors.primary,Thickness=1.2,Transparency=0.6})
-new("UIPadding",{Parent=infoText,PaddingTop=UDim.new(0,10),PaddingBottom=UDim.new(0,10),PaddingLeft=UDim.new(0,10),PaddingRight=UDim.new(0,10)})
-
--- FIXED: Minimized Icon (smaller size: 50x50)
-local minimized=false
+-- ------------------------------
+-- DRAG / MINIMIZE / CLOSE (kept light)
+-- ------------------------------
+-- Minimal minimize / close logic to avoid heavy tweens
+local minimized = false
 local icon
 local savedIconPos = UDim2.new(0,20,0,120)
 
 local function createMinimizedIcon()
     if icon then return end
-    icon=new("Frame",{
-        Parent=gui,
-        Size=UDim2.new(0,50,0,50),  -- FIXED: Reduced from 70x70 to 50x50
-        Position=savedIconPos,
-        BackgroundColor3=colors.darkest,
-        BorderSizePixel=0,
-        ZIndex=100
-    })
+    icon = new("Frame",{ Parent=gui, Size=UDim2.new(0,50,0,50), Position=savedIconPos, BackgroundColor3=colors.darkest, BorderSizePixel=0, ZIndex=100 })
     new("UICorner",{Parent=icon,CornerRadius=UDim.new(0,14)})
-    
-    local iconStroke = new("UIStroke",{Parent=icon,Color=colors.primary,Thickness=2,Transparency=0.2})
-    local iconGrad = new("UIGradient",{
-        Parent=iconStroke,
-        Color=ColorSequence.new{
-            ColorSequenceKeypoint.new(0, colors.primary),
-            ColorSequenceKeypoint.new(1, colors.secondary)
-        },
-        Rotation=0
-    })
-    
-    task.spawn(function()
-        while icon and icon.Parent do
-            for i = 0, 360, 3 do
-                if not icon or not icon.Parent then break end
-                iconGrad.Rotation = i
-                task.wait(0.02)
-            end
-        end
-    end)
-    
-    local logoK = new("TextLabel",{
-        Parent=icon,
-        Text="K",
-        Size=UDim2.new(1,0,1,0),
-        Font=Enum.Font.GothamBold,
-        TextSize=26,  -- FIXED: Reduced from 36 to 26
-        BackgroundTransparency=1,
-        TextColor3=colors.primary,
-        ZIndex=101
-    })
-    
+    local logoK = new("TextLabel",{ Parent=icon, Text="K", Size=UDim2.new(1,0,1,0), Font=Enum.Font.GothamBold, TextSize=26, BackgroundTransparency=1, TextColor3=colors.primary, ZIndex=101 })
     local dragging,dragStart,startPos,dragMoved = false,nil,nil,false
     icon.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging,dragMoved,dragStart,startPos = true,false,input.Position,icon.Position
         end
     end)
-    
     icon.InputChanged:Connect(function(input)
         if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             local delta = input.Position - dragStart
@@ -1221,18 +630,16 @@ local function createMinimizedIcon()
             icon.Position = UDim2.new(startPos.X.Scale,startPos.X.Offset + delta.X,startPos.Y.Scale,startPos.Y.Offset + delta.Y)
         end
     end)
-    
     icon.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            if dragging then
-                dragging = false
-                savedIconPos = icon.Position
-                if not dragMoved then
-                    inputBlocker.Visible,blurBg.Visible,win.Visible = true,true,true
-                    TweenService:Create(win,TweenInfo.new(0.5,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{Size=UDim2.new(0,520,0,380),Position=UDim2.new(0.5,-260,0.5,-190)}):Play()
-                    if icon then icon:Destroy() icon = nil end
-                    minimized = false
-                end
+            dragging = false
+            savedIconPos = icon.Position
+            if not dragMoved then
+                win.Visible, inputBlocker.Visible, blurBg.Visible = true, true, true
+                fastTween(win, {Size=UDim2.new(0,520,0,380), Position=UDim2.new(0.5,-260,0.5,-190)}, 0.4)
+                icon:Destroy()
+                icon = nil
+                minimized = false
             end
         end
     end)
@@ -1240,64 +647,38 @@ end
 
 btnMin.MouseButton1Click:Connect(function()
     if not minimized then
-        TweenService:Create(win,TweenInfo.new(0.4,Enum.EasingStyle.Back,Enum.EasingDirection.In),{Size=UDim2.new(0,0,0,0),Position=UDim2.new(0.5,0,0.5,0)}):Play()
-        TweenService:Create(inputBlocker,TweenInfo.new(0.3),{BackgroundTransparency=1}):Play()
-        TweenService:Create(blurBg,TweenInfo.new(0.3),{BackgroundTransparency=1}):Play()
-        task.wait(0.4)
-        win.Visible,inputBlocker.Visible,blurBg.Visible = false,false,false
+        fastTween(win, {Size = UDim2.new(0,0,0,0), Position = UDim2.new(0.5,0,0.5,0)}, 0.25)
+        inputBlocker.Visible, blurBg.Visible = true, true
+        task.wait(0.28)
+        win.Visible, inputBlocker.Visible, blurBg.Visible = false, false, false
         createMinimizedIcon()
         minimized = true
     end
 end)
 
 btnClose.MouseButton1Click:Connect(function()
-    TweenService:Create(win,TweenInfo.new(0.4,Enum.EasingStyle.Back,Enum.EasingDirection.In),{Size=UDim2.new(0,0,0,0),Position=UDim2.new(0.5,0,0.5,0),Rotation=180}):Play()
-    TweenService:Create(inputBlocker,TweenInfo.new(0.3),{BackgroundTransparency=1}):Play()
-    TweenService:Create(blurBg,TweenInfo.new(0.3),{BackgroundTransparency=1}):Play()
-    task.wait(0.4)
+    fastTween(win, {Size = UDim2.new(0,0,0,0), Position = UDim2.new(0.5,0,0.5,0)}, 0.22)
+    inputBlocker.Visible, blurBg.Visible = true, true
+    task.wait(0.26)
     gui:Destroy()
 end)
 
--- Draggable Window
+-- Drag window
 local dragging,dragStart,startPos = false,nil,nil
 topBar.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging,dragStart,startPos = true,input.Position,win.Position
     end
 end)
-
 UserInputService.InputChanged:Connect(function(input)
     if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
         local delta = input.Position - dragStart
         win.Position = UDim2.new(startPos.X.Scale,startPos.X.Offset + delta.X,startPos.Y.Scale,startPos.Y.Offset + delta.Y)
     end
 end)
-
 UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then 
-        dragging = false 
-    end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
 end)
 
--- Opening Animation
-task.spawn(function()
-    win.Size = UDim2.new(0,0,0,0)
-    win.Position = UDim2.new(0.5,0,0.5,0)
-    inputBlocker.Visible,blurBg.Visible = true,true
-    inputBlocker.BackgroundTransparency = 1
-    blurBg.BackgroundTransparency = 1
-    
-    task.wait(0.1)
-    
-    TweenService:Create(inputBlocker,TweenInfo.new(0.4),{BackgroundTransparency=0.3}):Play()
-    TweenService:Create(blurBg,TweenInfo.new(0.4),{BackgroundTransparency=0.15}):Play()
-    TweenService:Create(win,TweenInfo.new(0.6,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{
-        Size=UDim2.new(0,520,0,380),
-        Position=UDim2.new(0.5,-260,0.5,-190)
-    }):Play()
-end)
-
-print("✨ Keaby GUI v4.0 Ultra MOBILE OPTIMIZED loaded!")
-print("📱 Perfect for mobile devices")
-print("🔧 Smaller UI, dropdown teleport system")
-print("💎 Created by Keaby Team")
+-- final log
+print("✨ Keaby GUI v4.1 Performance Edition loaded (skeleton). Modules will load in background.")
