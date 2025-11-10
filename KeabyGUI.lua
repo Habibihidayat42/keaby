@@ -21,6 +21,7 @@ local instant = loadstring(game:HttpGet("https://raw.githubusercontent.com/Habib
 local instant2x = loadstring(game:HttpGet("https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/Instant2Xspeed.lua"))()
 local TeleportModule = loadstring(game:HttpGet("https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/TeleportModule.lua"))()
 local TeleportToPlayer = loadstring(game:HttpGet("https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/TeleportSystem/TeleportToPlayer.lua"))()
+local AutoSell = loadstring(game:HttpGet("https://raw.githubusercontent.com/Habibihidayat42/keaby/refs/heads/main/FungsiKeaby/ShopFeatures/AutoSell.lua"))()
 
 -- Ultra Modern Cyberpunk Palette
 local colors = {
@@ -349,6 +350,7 @@ end
 
 local mainPage = createPage("Main")
 local teleportPage = createPage("Teleport")
+local shopPage = createPage("Shop")
 local settingsPage = createPage("Settings")
 local infoPage = createPage("Info")
 mainPage.Visible = true
@@ -373,11 +375,13 @@ end
 
 local btnMain = createNavButton("Main", "🏠", "Main")
 local btnTeleport = createNavButton("Teleport", "🌍", "Teleport")
+local btnShop = createNavButton("Shop Features", "🛒", "Shop")
 local btnSettings = createNavButton("Settings", "⚙️", "Settings")
 local btnInfo = createNavButton("Info", "ℹ️", "Info")
 
 btnMain.MouseButton1Click:Connect(function() switchPage("Main") end)
 btnTeleport.MouseButton1Click:Connect(function() switchPage("Teleport") end)
+btnShop.MouseButton1Click:Connect(function() switchPage("Shop") end)
 btnSettings.MouseButton1Click:Connect(function() switchPage("Settings") end)
 btnInfo.MouseButton1Click:Connect(function() switchPage("Info") end)
 
@@ -892,6 +896,13 @@ end)
 Players.PlayerRemoving:Connect(function()
     refreshPlayerList()
 end)
+
+-- Auto Sell Panel
+local pnlSell = makePanel(shopPage, "💰 Auto Sell System", "")
+makeButton(pnlSell, "Sell All", function()
+	AutoSell.SellOnce()
+end)
+
 
 -- Settings Page
 local settingsPnl = makePanel(settingsPage,"⚙️ General Settings","")
