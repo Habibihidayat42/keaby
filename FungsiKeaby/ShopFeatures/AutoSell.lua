@@ -1,4 +1,4 @@
--- FungsiKeaby/AutoSell.lua
+-- FungsiKeaby/ShopFeatures/AutoSell.lua
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local AutoSell = {}
 
