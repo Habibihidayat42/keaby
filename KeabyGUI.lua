@@ -1078,26 +1078,17 @@ makeToggle(pnlAntiAFK, "Enable Anti-AFK", function(on)
     end
 end)
 
-local pnlFPS = makePanel(settingsPage, "⚡ FPS Unlocker", "Atur batas frame rate untuk gameplay yang lebih halus")
-
-makeToggle(pnlFPS, "Enable Unlock FPS", function(on)
-    if on then
-        UnlockFPS.Start()
-    else
-        UnlockFPS.Stop()
-    end
-end)
-
-makeDropdown(pnlFPS, "FPS Limit", {"60 FPS", "90 FPS", "120 FPS", "240 FPS"}, "60 FPS", function(selected)
-    local fpsValue = tonumber(string.match(selected, "%d+"))
+-- === FPS SETTINGS PANEL ===
+local pnlFPS = makePanel(settingsPage, "🎞️ FPS Unlocker", "")
+makeDropdown(pnlFPS, "Select FPS Limit", "⚙️", {"60 FPS", "90 FPS", "120 FPS", "240 FPS"}, function(selected)
+    local fpsValue = tonumber(selected:match("%d+"))
     if fpsValue then
-        UnlockFPS.CurrentCap = fpsValue
-        print("🎛️ FPS cap diubah menjadi:", fpsValue)
-        if UnlockFPS.Enabled then
-            UnlockFPS.SetCap(fpsValue)
-        end
+        UnlockFPS.SetFPS(fpsValue)
+        print("[KeabyGUI] FPS Limit set to:", fpsValue)
+    else
+        print("[KeabyGUI] Invalid FPS selection:", selected)
     end
-end)
+end, "FPSDropdown")
 
 
 makeToggle(settingsPnl,"Auto Save Settings",function(on) print("Auto Save:",on) end)
